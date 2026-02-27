@@ -112,17 +112,17 @@ function writeToSpreadsheet(data) {
     sheet.clearContents();
 
     const rows = [
-        ['물품검수조서'],
-        [],
+        ['물품검수조서', '', '', ''],
+        ['', '', '', ''],
         ['관련 문서', data.relatedDoc || '', '', ''],
         ['품  목', data.itemName || '', '구매금액', data.itemTotal || ''],
         ['검수연월일', data.inspectionDate || '', '물품구매자', data.buyerName || ''],
         ['검수 장소', data.inspectionPlace || '', '검수입회자', data.inspectorName || ''],
-        [],
-        ['작성자', label],
+        ['', '', '', ''],
+        ['작성자', label, '', ''],
     ];
     sheet.getRange(1, 1, rows.length, 4).setValues(rows);
-    sheet.getRange(1, 1).setFontSize(16).setFontWeight('bold');
+    sheet.getRange(1, 1, 1, 4).merge().setHorizontalAlignment('center').setFontSize(16).setFontWeight('bold');
 
     // 사진 → 드라이브 저장
     if (data.photos && data.photos.length) {
