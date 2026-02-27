@@ -3,7 +3,7 @@
    로그인 / 회원가입 / 검수 정보 / 사진 / 미리보기
    ============================================================ */
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwh0EwoVOnjegLvD3ZsIAHguAPkNZuMzGy1cpgM1PXMxgfJVJhWbz2G5w3wMMpE-HRFsg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxG9eW6tGZJNb8nNmE_sgPd_kb0NTnvC7nyvjrFaoVLQi0THaRIJ31sGem1b70nsBnGtw/exec';
 
 /* ── 상태 ── */
 const state = {
