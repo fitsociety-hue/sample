@@ -15,6 +15,7 @@
 
 <body>
 
+    <!-- ========== HEADER ========== -->
     <header class="app-header">
         <div class="header-content">
             <div class="logo-area">
@@ -24,209 +25,250 @@
                     <div class="subtitle">강동어울림복지관</div>
                 </div>
             </div>
+            <!-- 로그인 사용자 정보 (로그인 후 표시) -->
+            <div class="user-info" id="headerUser" style="display:none;">
+                <span class="user-badge" id="headerUserName"></span>
+                <button class="btn-logout" onclick="logout()">로그아웃</button>
+            </div>
         </div>
     </header>
 
-    <nav class="tab-nav">
-        <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">📝 새 문서 작성</button>
-        <button class="nav-tab" id="tabHistory" onclick="switchTab('history')">📁 저장 기록</button>
-    </nav>
+    <!-- ========== AUTH SCREEN (로그인/회원가입) ========== -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-logo">📋</div>
+            <div class="auth-title">물품검수조서</div>
+            <div class="auth-subtitle">강동어울림복지관</div>
 
-    <main class="container">
-
-        <!-- ====== MAIN FORM ====== -->
-        <div id="mainApp">
-
-            <!-- Progress (3 steps) -->
-            <div class="progress-bar">
-                <div class="progress-step active" data-step="1">
-                    <div class="step-circle">1</div><span>기본 정보</span>
-                </div>
-                <div class="progress-line"></div>
-                <div class="progress-step" data-step="2">
-                    <div class="step-circle">2</div><span>사진 등록</span>
-                </div>
-                <div class="progress-line"></div>
-                <div class="progress-step" data-step="3">
-                    <div class="step-circle">3</div><span>최종 확인</span>
-                </div>
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">로그인</button>
+                <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">회원가입</button>
             </div>
 
-            <!-- ===== STEP 1: 작성자 + 검수 정보 ===== -->
-            <section class="step-section active" id="step1">
-
-                <!-- 작성자 정보 -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">👤</span> 작성자 정보</h2>
+            <!-- 로그인 폼 -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <label for="loginName">직원 이름</label>
+                    <input type="text" id="loginName" placeholder="이름을 입력하세요" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <div class="pin-group">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="lpin0"
+                            oninput="movePIN(this,'lpin1')" onkeydown="backPIN(event,this,null)">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="lpin1"
+                            oninput="movePIN(this,'lpin2')" onkeydown="backPIN(event,this,'lpin0')">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="lpin2"
+                            oninput="movePIN(this,'lpin3')" onkeydown="backPIN(event,this,'lpin1')">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="lpin3"
+                            oninput="movePIN(this,null)" onkeydown="backPIN(event,this,'lpin2')"
+                            onkeyup="tryAutoLogin(event)">
                     </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label for="teamName">사업팀명 <span class="badge-optional">선택사항</span></label>
-                            <input type="text" id="teamName" placeholder="예) 재활지원팀, 사무국">
-                        </div>
-                        <div class="form-group">
-                            <label for="authorName">작성자 이름 <span class="badge-required">필수</span></label>
-                            <input type="text" id="authorName" placeholder="이름을 입력하세요" required>
-                        </div>
-                        <div class="form-group">
-                            <label>비밀번호 <span class="badge-optional">4자리 — 본인 문서 보호</span></label>
-                            <div class="pin-group">
-                                <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin0"
-                                    oninput="movePIN(this,1)" onkeydown="backPIN(event,this,null)">
-                                <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin1"
-                                    oninput="movePIN(this,2)" onkeydown="backPIN(event,this,0)">
-                                <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin2"
-                                    oninput="movePIN(this,3)" onkeydown="backPIN(event,this,1)">
-                                <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin3"
-                                    oninput="movePIN(this,null)" onkeydown="backPIN(event,this,2)">
-                            </div>
-                        </div>
+                </div>
+                <div class="auth-error" id="loginError"></div>
+                <button class="btn btn-primary auth-btn" id="loginBtn" onclick="login()">로그인</button>
+            </div>
+
+            <!-- 회원가입 폼 -->
+            <div id="registerForm" style="display:none;">
+                <div class="form-group">
+                    <label for="regTeam">사업팀명 <span class="badge-optional">선택사항</span></label>
+                    <input type="text" id="regTeam" placeholder="예) 재활지원팀, 사무국">
+                </div>
+                <div class="form-group">
+                    <label for="regName">직원 이름 <span class="badge-required">필수</span></label>
+                    <input type="text" id="regName" placeholder="이름을 입력하세요" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 4자리 <span class="badge-required">필수</span></label>
+                    <div class="pin-group">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="rpin0"
+                            oninput="movePIN(this,'rpin1')" onkeydown="backPIN(event,this,null)">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="rpin1"
+                            oninput="movePIN(this,'rpin2')" onkeydown="backPIN(event,this,'rpin0')">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="rpin2"
+                            oninput="movePIN(this,'rpin3')" onkeydown="backPIN(event,this,'rpin1')">
+                        <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="rpin3"
+                            oninput="movePIN(this,null)" onkeydown="backPIN(event,this,'rpin2')">
+                    </div>
+                </div>
+                <div class="auth-error" id="registerError"></div>
+                <button class="btn btn-primary auth-btn" id="registerBtn" onclick="register()">회원가입</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MAIN APP (로그인 후) ========== -->
+    <div id="mainWrapper" style="display:none;">
+
+        <nav class="tab-nav">
+            <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">📝 새 문서 작성</button>
+            <button class="nav-tab" id="tabHistory" onclick="switchTab('history')">📁 내 기록</button>
+        </nav>
+
+        <main class="container">
+
+            <!-- ====== FORM APP ====== -->
+            <div id="mainApp">
+
+                <div class="progress-bar">
+                    <div class="progress-step active" data-step="1">
+                        <div class="step-circle">1</div><span>검수 정보</span>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-circle">2</div><span>사진 등록</span>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step" data-step="3">
+                        <div class="step-circle">3</div><span>최종 확인</span>
                     </div>
                 </div>
 
-                <!-- 검수 정보 -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">📦</span> 검수 정보</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label for="relatedDoc">관련 문서</label>
-                            <input type="text" id="relatedDoc" placeholder="예) 직원 교육 물품 구입">
+                <!-- STEP 1: 검수 정보 -->
+                <section class="step-section active" id="step1">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><span class="card-icon">📦</span> 검수 정보</h2>
                         </div>
-                        <div class="form-group">
-                            <label for="itemName">품목 <span class="badge-required">필수</span></label>
-                            <input type="text" id="itemName" placeholder="예) A4 용지, 사무용품" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="itemTotal">구매금액 (원) <span class="badge-required">필수</span></label>
-                            <input type="text" id="itemTotal" placeholder="예) 25000" inputmode="numeric">
-                        </div>
-                        <div class="form-group">
-                            <label for="inspectionDate">검수 연월일 <span class="badge-required">필수</span></label>
-                            <input type="date" id="inspectionDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="inspectionPlace">검수 장소</label>
-                            <input type="text" id="inspectionPlace" placeholder="예) 1층 물품 창고, 사무실">
-                        </div>
-                        <div class="form-row">
+                        <div class="card-body">
                             <div class="form-group">
-                                <label for="buyerName">물품구매자</label>
-                                <input type="text" id="buyerName" placeholder="이름">
+                                <label for="relatedDoc">관련 문서</label>
+                                <input type="text" id="relatedDoc" placeholder="예) 직원 교육 물품 구입">
                             </div>
                             <div class="form-group">
-                                <label for="inspectorName">검수입회자</label>
-                                <input type="text" id="inspectorName" placeholder="이름">
+                                <label for="itemName">품목 <span class="badge-required">필수</span></label>
+                                <input type="text" id="itemName" placeholder="예) A4 용지, 사무용품" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="itemTotal">구매금액 (원) <span class="badge-required">필수</span></label>
+                                <input type="text" id="itemTotal" placeholder="예) 25000" inputmode="numeric">
+                            </div>
+                            <div class="form-group">
+                                <label for="inspectionDate">검수 연월일 <span class="badge-required">필수</span></label>
+                                <input type="date" id="inspectionDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="inspectionPlace">검수 장소</label>
+                                <input type="text" id="inspectionPlace" placeholder="예) 1층 물품 창고, 사무실">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="buyerName">물품구매자</label>
+                                    <input type="text" id="buyerName" placeholder="이름">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inspectorName">검수입회자</label>
+                                    <input type="text" id="inspectorName" placeholder="이름">
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="step-nav">
-                    <div></div>
-                    <button class="btn btn-primary" onclick="goToStep(2)">다음 <span class="btn-arrow">→</span></button>
-                </div>
-            </section>
-
-            <!-- ===== STEP 2: 사진 등록 ===== -->
-            <section class="step-section" id="step2">
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">📷</span> 검수 사진 등록 <span class="badge-required">필수</span></h2>
-                        <p class="card-desc">1~4장의 검수 사진을 등록하세요</p>
+                    <div class="step-nav">
+                        <div></div>
+                        <button class="btn btn-primary" onclick="goToStep(2)">다음 <span
+                                class="btn-arrow">→</span></button>
                     </div>
-                    <div class="card-body">
-                        <div class="upload-area" onclick="document.getElementById('photoInput').click()">
-                            <input type="file" id="photoInput" accept="image/*" multiple capture="environment"
-                                style="display:none" onchange="handlePhotoUpload(this)">
-                            <div class="upload-icon">
-                                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                                </svg>
-                            </div>
-                            <p class="upload-text">📸 사진 선택 또는 촬영</p>
-                            <p class="upload-hint">최대 4장 · JPG, PNG, HEIC 지원</p>
-                        </div>
+                </section>
 
-                        <div id="photoPreviewArea" style="display:none;">
-                            <div class="photo-count-row">
-                                <span class="photo-count">등록된 사진: <strong id="photoCountNum">0</strong>장</span>
-                                <span class="layout-badge" id="layoutBadge"></span>
+                <!-- STEP 2: 사진 -->
+                <section class="step-section" id="step2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><span class="card-icon">📷</span> 검수 사진 등록 <span class="badge-required">필수</span></h2>
+                            <p class="card-desc">1~4장의 검수 사진을 등록하세요</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area" onclick="document.getElementById('photoInput').click()">
+                                <input type="file" id="photoInput" accept="image/*" multiple capture="environment"
+                                    style="display:none" onchange="handlePhotoUpload(this)">
+                                <div class="upload-icon">
+                                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                    </svg>
+                                </div>
+                                <p class="upload-text">📸 사진 선택 또는 촬영</p>
+                                <p class="upload-hint">최대 4장 · JPG, PNG, HEIC 지원</p>
                             </div>
-                            <div class="photo-grid" id="photoGrid"></div>
-                            <button class="btn btn-outline btn-small" style="margin-top:12px;"
-                                onclick="document.getElementById('photoInput').click()">
-                                + 사진 추가
-                            </button>
+
+                            <div id="photoPreviewArea" style="display:none;">
+                                <div class="photo-count-row">
+                                    <span class="photo-count">등록: <strong id="photoCountNum">0</strong>장</span>
+                                    <span class="layout-badge" id="layoutBadge"></span>
+                                </div>
+                                <div class="photo-grid" id="photoGrid"></div>
+                                <button class="btn btn-outline btn-small" style="margin-top:12px;"
+                                    onclick="document.getElementById('photoInput').click()">+ 사진 추가</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="step-nav">
-                    <button class="btn btn-outline" onclick="goToStep(1)"><span class="btn-arrow">←</span> 이전</button>
-                    <button class="btn btn-primary" onclick="goToStep(3)">다음 <span class="btn-arrow">→</span></button>
-                </div>
-            </section>
-
-            <!-- ===== STEP 3: 미리보기 / 최종 확인 ===== -->
-            <section class="step-section" id="step3">
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">👁️</span> 최종 확인</h2>
-                        <p class="card-desc">내용을 확인 후 제출하세요</p>
+                    <div class="step-nav">
+                        <button class="btn btn-outline" onclick="goToStep(1)"><span class="btn-arrow">←</span>
+                            이전</button>
+                        <button class="btn btn-primary" onclick="goToStep(3)">다음 <span
+                                class="btn-arrow">→</span></button>
                     </div>
-                    <div class="card-body">
-                        <div class="document-preview" id="documentPreview"></div>
+                </section>
+
+                <!-- STEP 3: 최종 확인 -->
+                <section class="step-section" id="step3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><span class="card-icon">👁️</span> 최종 확인</h2>
+                            <p class="card-desc">내용을 확인 후 제출하세요</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="document-preview" id="documentPreview"></div>
+                        </div>
                     </div>
+                    <div class="step-nav">
+                        <button class="btn btn-outline" onclick="goToStep(2)"><span class="btn-arrow">←</span>
+                            이전</button>
+                        <button class="btn btn-submit" id="submitBtn" onclick="submitDocument()">
+                            <span class="submit-icon">📤</span> 제출하기
+                        </button>
+                    </div>
+                </section>
+
+            </div><!-- /#mainApp -->
+
+            <!-- ====== HISTORY ====== -->
+            <div id="historyPanel" style="display:none; padding-bottom:40px;">
+                <div class="history-panel-header">
+                    <h2>📁 내가 작성한 기록</h2>
+                    <button class="btn btn-small btn-outline" onclick="loadHistory()">🔄 새로고침</button>
                 </div>
-
-                <div class="step-nav">
-                    <button class="btn btn-outline" onclick="goToStep(2)"><span class="btn-arrow">←</span> 이전</button>
-                    <button class="btn btn-submit" id="submitBtn" onclick="submitDocument()">
-                        <span class="submit-icon">📤</span> 제출하기
-                    </button>
+                <div id="historyLoading" class="history-loading" style="display:none;">
+                    <div class="loading-spinner"></div>
+                    <p>불러오는 중...</p>
                 </div>
-            </section>
-
-        </div><!-- /#mainApp -->
-
-        <!-- ====== HISTORY PANEL ====== -->
-        <div id="historyPanel" style="display:none; padding-bottom:40px;">
-            <div class="history-panel-header">
-                <h2>📁 저장된 문서 기록</h2>
-                <button class="btn btn-small btn-outline" onclick="loadHistory()">🔄 새로고침</button>
+                <div id="historyEmpty" class="history-empty" style="display:none;">📭 작성한 문서가 없습니다</div>
+                <div id="historyList" class="history-list"></div>
+                <div style="text-align:center;margin-top:24px;">
+                    <a href="https://docs.google.com/spreadsheets/d/1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M/edit"
+                        target="_blank" class="btn btn-primary" style="text-decoration:none;">📊 스프레드시트 보기</a>
+                </div>
             </div>
-            <div id="historyLoading" class="history-loading" style="display:none;">
-                <div class="loading-spinner"></div>
-                <p>불러오는 중...</p>
-            </div>
-            <div id="historyEmpty" class="history-empty" style="display:none;">📭 저장된 문서가 없습니다</div>
-            <div id="historyList" class="history-list"></div>
-            <div style="text-align:center;margin-top:24px;">
-                <a href="https://docs.google.com/spreadsheets/d/1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M/edit"
-                    target="_blank" class="btn btn-primary" style="text-decoration:none;">📊 스프레드시트 보기</a>
-            </div>
-        </div>
 
-        <!-- Loading -->
-        <div class="loading-overlay" id="loadingOverlay" style="display:none;">
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <p class="loading-text">저장 중입니다...</p>
-                <p class="loading-subtext">잠시만 기다려 주세요</p>
+            <!-- Loading -->
+            <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">저장 중입니다...</p>
+                    <p class="loading-subtext">잠시만 기다려 주세요</p>
+                </div>
             </div>
-        </div>
 
-        <!-- Success Modal -->
-        <div class="modal-overlay" id="successModal" style="display:none;">
-            <div class="modal-content"></div>
-        </div>
+            <!-- Success Modal -->
+            <div class="modal-overlay" id="successModal" style="display:none;">
+                <div class="modal-content"></div>
+            </div>
 
-    </main>
+        </main>
+    </div><!-- /#mainWrapper -->
 
     <script src="app.js"></script>
 </body>
