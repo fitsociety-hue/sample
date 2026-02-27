@@ -245,7 +245,7 @@ function renderPhotos() {
       <span class="photo-number">사진 ${i + 1}</span>
     </div>`).join('');
 
-    const labels = ['', '전체 1장', '좌우 2분할', '메인+서브 3장', '2×2 4분할'];
+    const labels = ['', '1장 중앙', '위아래 2장', '상허1하늀2장', '2×2 그리드'];
     $id('layoutBadge').textContent = '✓ ' + (labels[n] || '자동 배치');
 }
 
