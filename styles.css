@@ -662,6 +662,11 @@ body {
     transform: translateY(0);
 }
 
+.auth-btn {
+    justify-content: center;
+    width: 100%;
+}
+
 .btn-outline {
     background: var(--white);
     color: var(--blue-700);
