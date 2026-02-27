@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>물품검수조서 - 강동어울림복지관</title>
-    <meta name="description" content="강동어울림복지관 물품검수조서 자동 작성 시스템">
+    <meta name="description" content="강동어울림복지관 물품검수조서 작성 시스템">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
@@ -15,7 +15,6 @@
 
 <body>
 
-    <!-- Header -->
     <header class="app-header">
         <div class="header-content">
             <div class="logo-area">
@@ -28,7 +27,6 @@
         </div>
     </header>
 
-    <!-- Tab Navigation -->
     <nav class="tab-nav">
         <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">📝 새 문서 작성</button>
         <button class="nav-tab" id="tabHistory" onclick="switchTab('history')">📁 저장 기록</button>
@@ -36,28 +34,25 @@
 
     <main class="container">
 
-        <!-- ===================== MAIN FORM AREA ===================== -->
+        <!-- ====== MAIN FORM ====== -->
         <div id="mainApp">
 
-            <!-- Progress Bar (3 steps) -->
+            <!-- Progress (3 steps) -->
             <div class="progress-bar">
                 <div class="progress-step active" data-step="1">
-                    <div class="step-circle">1</div>
-                    <span>문서 정보</span>
+                    <div class="step-circle">1</div><span>기본 정보</span>
                 </div>
                 <div class="progress-line"></div>
                 <div class="progress-step" data-step="2">
-                    <div class="step-circle">2</div>
-                    <span>사진 · 서명</span>
+                    <div class="step-circle">2</div><span>사진 등록</span>
                 </div>
                 <div class="progress-line"></div>
                 <div class="progress-step" data-step="3">
-                    <div class="step-circle">3</div>
-                    <span>최종 확인</span>
+                    <div class="step-circle">3</div><span>최종 확인</span>
                 </div>
             </div>
 
-            <!-- ===== STEP 1: 기본 정보 + 물품 정보 (통합) ===== -->
+            <!-- ===== STEP 1: 작성자 + 검수 정보 ===== -->
             <section class="step-section active" id="step1">
 
                 <!-- 작성자 정보 -->
@@ -71,12 +66,12 @@
                             <input type="text" id="teamName" placeholder="예) 재활지원팀, 사무국">
                         </div>
                         <div class="form-group">
-                            <label for="authorName">작성자 이름</label>
+                            <label for="authorName">작성자 이름 <span class="badge-required">필수</span></label>
                             <input type="text" id="authorName" placeholder="이름을 입력하세요" required>
                         </div>
                         <div class="form-group">
-                            <label>비밀번호 <span class="badge-optional">4자리 숫자 — 본인 문서 보호용</span></label>
-                            <div class="pin-group" id="pinWrapper">
+                            <label>비밀번호 <span class="badge-optional">4자리 — 본인 문서 보호</span></label>
+                            <div class="pin-group">
                                 <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin0"
                                     oninput="movePIN(this,1)" onkeydown="backPIN(event,this,null)">
                                 <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="pin1"
@@ -90,53 +85,57 @@
                     </div>
                 </div>
 
-                <!-- 검수 및 물품 정보 -->
+                <!-- 검수 정보 -->
                 <div class="card">
                     <div class="card-header">
-                        <h2><span class="card-icon">�</span> 검수 및 물품 정보</h2>
+                        <h2><span class="card-icon">📦</span> 검수 정보</h2>
                     </div>
                     <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="inspectionDate">검수일자</label>
-                                <input type="date" id="inspectionDate" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="receiptDate">영수증일자</label>
-                                <input type="date" id="receiptDate">
-                            </div>
-                        </div>
                         <div class="form-group">
                             <label for="relatedDoc">관련 문서</label>
-                            <input type="text" id="relatedDoc" placeholder="예) 직원 교육 물품 구입, 사무용품 구매">
+                            <input type="text" id="relatedDoc" placeholder="예) 직원 교육 물품 구입">
                         </div>
                         <div class="form-group">
-                            <label for="itemName">물품명</label>
-                            <input type="text" id="itemName" placeholder="예) A4 용지, 프린터 카트리지" required>
+                            <label for="itemName">품목 <span class="badge-required">필수</span></label>
+                            <input type="text" id="itemName" placeholder="예) A4 용지, 사무용품" required>
                         </div>
                         <div class="form-group">
-                            <label for="itemTotal">합계 금액 (원)</label>
-                            <input type="text" id="itemTotal" placeholder="예) 24000" inputmode="numeric">
+                            <label for="itemTotal">구매금액 (원) <span class="badge-required">필수</span></label>
+                            <input type="text" id="itemTotal" placeholder="예) 25000" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="inspectionDate">검수 연월일 <span class="badge-required">필수</span></label>
+                            <input type="date" id="inspectionDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="inspectionPlace">검수 장소</label>
+                            <input type="text" id="inspectionPlace" placeholder="예) 1층 물품 창고, 사무실">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="buyerName">물품구매자</label>
+                                <input type="text" id="buyerName" placeholder="이름">
+                            </div>
+                            <div class="form-group">
+                                <label for="inspectorName">검수입회자</label>
+                                <input type="text" id="inspectorName" placeholder="이름">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="step-nav">
                     <div></div>
-                    <button class="btn btn-primary" onclick="goToStep(2)">
-                        다음 <span class="btn-arrow">→</span>
-                    </button>
+                    <button class="btn btn-primary" onclick="goToStep(2)">다음 <span class="btn-arrow">→</span></button>
                 </div>
             </section>
 
-            <!-- ===== STEP 2: 사진 + 서명 ===== -->
+            <!-- ===== STEP 2: 사진 등록 ===== -->
             <section class="step-section" id="step2">
-
-                <!-- 사진 등록 -->
                 <div class="card">
                     <div class="card-header">
-                        <h2><span class="card-icon">📷</span> 검수 사진 등록</h2>
-                        <p class="card-desc">1~4장의 사진을 등록하세요 (필수)</p>
+                        <h2><span class="card-icon">📷</span> 검수 사진 등록 <span class="badge-required">필수</span></h2>
+                        <p class="card-desc">1~4장의 검수 사진을 등록하세요</p>
                     </div>
                     <div class="card-body">
                         <div class="upload-area" onclick="document.getElementById('photoInput').click()">
@@ -154,114 +153,26 @@
                         </div>
 
                         <div id="photoPreviewArea" style="display:none;">
-                            <p class="photo-count">등록된 사진: <span id="photoCountNum">0</span>장</p>
+                            <div class="photo-count-row">
+                                <span class="photo-count">등록된 사진: <strong id="photoCountNum">0</strong>장</span>
+                                <span class="layout-badge" id="layoutBadge"></span>
+                            </div>
                             <div class="photo-grid" id="photoGrid"></div>
-                            <div class="photo-layout-info">
-                                <span class="layout-badge" id="layoutBadge">✓ 자동 배치 완료</span>
-                            </div>
+                            <button class="btn btn-outline btn-small" style="margin-top:12px;"
+                                onclick="document.getElementById('photoInput').click()">
+                                + 사진 추가
+                            </button>
                         </div>
-                    </div>
-                </div>
-
-                <!-- 서명 (선택사항) -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">✍️</span> 서명 / 날인 <span class="badge-optional">선택사항</span></h2>
-                        <p class="card-desc">출력 후 직접 서명·날인하셔도 됩니다</p>
-                    </div>
-                    <div class="card-body">
-
-                        <!-- 물품구매자 -->
-                        <div style="margin-bottom:20px;">
-                            <div class="info-section-label"
-                                style="margin-bottom:8px;font-size:.72rem;font-weight:700;color:var(--blue-700);">물품구매자
-                            </div>
-                            <div class="form-group">
-                                <label for="buyerName">이름</label>
-                                <input type="text" id="buyerName" placeholder="구매자 이름">
-                            </div>
-                            <div class="signature-section">
-                                <div class="signature-tabs">
-                                    <button class="sig-tab active" onclick="switchSigTab('buyer','draw',this)">✏️
-                                        사인</button>
-                                    <button class="sig-tab" onclick="switchSigTab('buyer','stamp',this)">🔖 날인</button>
-                                </div>
-                                <div id="buyerDrawArea">
-                                    <div class="signature-pad-wrapper">
-                                        <canvas class="signature-canvas" id="buyerCanvas"></canvas>
-                                        <span class="signature-placeholder" id="buyerPlaceholder">여기에 서명하세요</span>
-                                    </div>
-                                    <button class="btn btn-clear btn-small"
-                                        onclick="clearSignature('buyer')">지우기</button>
-                                </div>
-                                <div id="buyerStampArea" style="display:none;">
-                                    <div class="stamp-upload-area"
-                                        onclick="document.getElementById('buyerStampInput').click()">
-                                        <input type="file" id="buyerStampInput" accept="image/*" style="display:none"
-                                            onchange="loadStamp('buyer',this)">
-                                        <div id="buyerStampPreview" class="stamp-placeholder">
-                                            <span>🔖</span>
-                                            <p>날인 이미지 업로드</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr style="border:none;border-top:1px solid var(--gray-100);margin:4px 0 20px;">
-
-                        <!-- 검수입회자 -->
-                        <div>
-                            <div class="info-section-label"
-                                style="margin-bottom:8px;font-size:.72rem;font-weight:700;color:var(--blue-700);">검수입회자
-                            </div>
-                            <div class="form-group">
-                                <label for="inspectorName">이름</label>
-                                <input type="text" id="inspectorName" placeholder="검수자 이름">
-                            </div>
-                            <div class="signature-section">
-                                <div class="signature-tabs">
-                                    <button class="sig-tab active" onclick="switchSigTab('inspector','draw',this)">✏️
-                                        사인</button>
-                                    <button class="sig-tab" onclick="switchSigTab('inspector','stamp',this)">🔖
-                                        날인</button>
-                                </div>
-                                <div id="inspectorDrawArea">
-                                    <div class="signature-pad-wrapper">
-                                        <canvas class="signature-canvas" id="inspectorCanvas"></canvas>
-                                        <span class="signature-placeholder" id="inspectorPlaceholder">여기에 서명하세요</span>
-                                    </div>
-                                    <button class="btn btn-clear btn-small"
-                                        onclick="clearSignature('inspector')">지우기</button>
-                                </div>
-                                <div id="inspectorStampArea" style="display:none;">
-                                    <div class="stamp-upload-area"
-                                        onclick="document.getElementById('inspectorStampInput').click()">
-                                        <input type="file" id="inspectorStampInput" accept="image/*"
-                                            style="display:none" onchange="loadStamp('inspector',this)">
-                                        <div id="inspectorStampPreview" class="stamp-placeholder">
-                                            <span>🔖</span>
-                                            <p>날인 이미지 업로드</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </div>
 
                 <div class="step-nav">
-                    <button class="btn btn-outline" onclick="goToStep(1)">
-                        <span class="btn-arrow">←</span> 이전
-                    </button>
-                    <button class="btn btn-primary" onclick="goToStep(3)">
-                        다음 <span class="btn-arrow">→</span>
-                    </button>
+                    <button class="btn btn-outline" onclick="goToStep(1)"><span class="btn-arrow">←</span> 이전</button>
+                    <button class="btn btn-primary" onclick="goToStep(3)">다음 <span class="btn-arrow">→</span></button>
                 </div>
             </section>
 
-            <!-- ===== STEP 3: 최종 확인 ===== -->
+            <!-- ===== STEP 3: 미리보기 / 최종 확인 ===== -->
             <section class="step-section" id="step3">
                 <div class="card">
                     <div class="card-header">
@@ -274,9 +185,7 @@
                 </div>
 
                 <div class="step-nav">
-                    <button class="btn btn-outline" onclick="goToStep(2)">
-                        <span class="btn-arrow">←</span> 이전
-                    </button>
+                    <button class="btn btn-outline" onclick="goToStep(2)"><span class="btn-arrow">←</span> 이전</button>
                     <button class="btn btn-submit" id="submitBtn" onclick="submitDocument()">
                         <span class="submit-icon">📤</span> 제출하기
                     </button>
@@ -285,7 +194,7 @@
 
         </div><!-- /#mainApp -->
 
-        <!-- ===================== HISTORY PANEL ===================== -->
+        <!-- ====== HISTORY PANEL ====== -->
         <div id="historyPanel" style="display:none; padding-bottom:40px;">
             <div class="history-panel-header">
                 <h2>📁 저장된 문서 기록</h2>
@@ -293,32 +202,28 @@
             </div>
             <div id="historyLoading" class="history-loading" style="display:none;">
                 <div class="loading-spinner"></div>
-                <p>기록을 불러오는 중...</p>
+                <p>불러오는 중...</p>
             </div>
             <div id="historyEmpty" class="history-empty" style="display:none;">📭 저장된 문서가 없습니다</div>
             <div id="historyList" class="history-list"></div>
             <div style="text-align:center;margin-top:24px;">
                 <a href="https://docs.google.com/spreadsheets/d/1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M/edit"
-                    target="_blank" class="btn btn-primary" style="text-decoration:none;">
-                    📊 스프레드시트 전체 보기
-                </a>
+                    target="_blank" class="btn btn-primary" style="text-decoration:none;">📊 스프레드시트 보기</a>
             </div>
         </div>
 
-        <!-- Loading Overlay -->
+        <!-- Loading -->
         <div class="loading-overlay" id="loadingOverlay" style="display:none;">
             <div class="loading-content">
                 <div class="loading-spinner"></div>
-                <p class="loading-text">문서를 저장하고 있습니다...</p>
+                <p class="loading-text">저장 중입니다...</p>
                 <p class="loading-subtext">잠시만 기다려 주세요</p>
             </div>
         </div>
 
         <!-- Success Modal -->
         <div class="modal-overlay" id="successModal" style="display:none;">
-            <div class="modal-content">
-                <!-- Dynamically filled by showSuccessModal() -->
-            </div>
+            <div class="modal-content"></div>
         </div>
 
     </main>
