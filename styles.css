@@ -437,7 +437,15 @@ body {
 }
 
 .photo-grid.grid-1 {
-    grid-template-columns: 1fr;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.photo-grid.grid-1 .photo-item {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 .photo-grid.grid-2 {

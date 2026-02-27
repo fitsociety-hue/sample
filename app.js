@@ -3,7 +3,7 @@
    로그인 / 회원가입 / 검수 정보 / 사진 / 미리보기
    ============================================================ */
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxG9eW6tGZJNb8nNmE_sgPd_kb0NTnvC7nyvjrFaoVLQi0THaRIJ31sGem1b70nsBnGtw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdHvTVKv7uzXcm-c53gWG8vicvhKz9wQ89Jhps_2rRhzHux5KBQ4nyb6BD906NxTQL/exec';
 
 /* ── 상태 ── */
 const state = {
@@ -400,7 +400,7 @@ function renderHistory(records) {
     $id('historyLoading').style.display = 'none';
     if (!records?.length) { $id('historyEmpty').style.display = ''; return; }
     $id('historyEmpty').style.display = 'none';
-    $id('historyList').innerHTML = [...records].reverse().map(r => `
+    $id('historyList').innerHTML = [...records].reverse().map((r, i) => `
     <div class="history-card">
       <div class="history-header">
         <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
@@ -414,6 +414,42 @@ function renderHistory(records) {
       </div>
       <div class="history-actions">
         ${r.sheetUrl ? `<a href="${r.sheetUrl}" target="_blank" class="history-link">📄 열기</a>` : ''}
+        <button class="history-link history-print-btn" onclick="printRecord(${JSON.stringify(r).replace(/"/g, '&quot;')})">🖨️ 인쇄/PDF</button>
       </div>
     </div>`).join('');
+}
+
+function printRecord(r) {
+    const label = (r.teamName ? `${r.teamName} / ` : '') + (r.name || '');
+    const w = window.open('', '_blank', 'width=800,height=600');
+    w.document.write(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>물품검수조서 - ${r.itemName || ''}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding: 40px; color: #111; }
+  h1 { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 24px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th, td { border: 1px solid #555; padding: 8px 12px; font-size: 14px; }
+  th { background: #eee; font-weight: 600; width: 25%; }
+  .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #555; }
+  .print-btn { display: block; margin: 20px auto; padding: 10px 30px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  @media print { .print-btn { display: none; } body { padding: 20px; } }
+</style>
+</head>
+<body>
+<h1>물품검수조서</h1>
+<table>
+  <tr><th>관련 문서</th><td colspan="3">${r.relatedDoc || ''}</td></tr>
+  <tr><th>품목</th><td>${r.itemName || ''}</td><th>구매금액</th><td>${r.itemTotal ? Number(r.itemTotal).toLocaleString('ko-KR') + '원' : ''}</td></tr>
+  <tr><th>검수연월일</th><td>${r.inspectionDate || ''}</td><th>제출일시</th><td>${r.submittedAt || ''}</td></tr>
+  <tr><th>작성자</th><td colspan="3">${label}</td></tr>
+</table>
+<button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+<div class="footer">사단법인 한국지체장애인협회 강동어울림복지관</div>
+</body>
+</html>`);
+    w.document.close();
 }
