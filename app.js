@@ -484,26 +484,6 @@ function buildPreview() {
    SUBMIT
    ════════════════════════════════════════════════ */
 /* ── 로컬 캐시 (인쇄용) ── */
-function saveSubmissionToLocal(payload) {
-    try {
-        const cache = JSON.parse(localStorage.getItem('gi_submissions') || '{}');
-        const key = `${payload.itemName}_${payload.inspectionDate}_${payload.userId}`;
-        cache[key] = {
-            relatedDoc: payload.relatedDoc,
-            itemName: payload.itemName,
-            itemTotal: payload.itemTotal,
-            inspectionDate: payload.inspectionDate,
-            inspectionPlace: payload.inspectionPlace,
-            buyerName: payload.buyerName,
-            inspectorName: payload.inspectorName,
-            name: payload.name,
-            teamName: payload.teamName,
-            photos: payload.photos,
-            savedAt: new Date().toISOString(),
-        };
-        localStorage.setItem('gi_submissions', JSON.stringify(cache));
-    } catch (_) { /* quota exceeded 등 무시 */ }
-}
 
 function getLocalSubmission(r) {
     try {
@@ -695,7 +675,7 @@ async function syncCIToServer(ciImage) {
                 if (!m) m = result.ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
                 if (m) {
                     try {
-                        localStorage.setItem('gi_photo_' + m[1], base64Data);
+                        localStorage.setItem('gi_photo_' + m[1], ciImage);
                     } catch (e) {
                         console.warn('캐시 저장 실패 (용량 부족 등):', e);
                     }
@@ -711,12 +691,13 @@ async function syncCIToServer(ciImage) {
 }
 
 function loadCIPreview() {
-    const preview = $id('ciPreviewLine');
-    const b1 = $id('ciUploadBtn');
-    const b2 = $id('ciSaveBtn');
-    const b3 = $id('ciDeleteBtn');
+    const ciPreview = $id('ciPreview');
+    const ciPreviewImg = $id('ciPreviewImg');
+    const ciEmpty = $id('ciEmpty');
+    const ciSaveBtn = $id('ciSaveBtn');
+    const ciDeleteBtn = $id('ciDeleteBtn');
 
-    if (!preview) return;
+    if (!ciPreview) return;
 
     let ciData = localStorage.getItem('gi_ci_image_pending');
     let isPending = true;
@@ -728,24 +709,17 @@ function loadCIPreview() {
 
     if (ciData) {
         const urlObj = getReliablePhotoUrl(ciData);
-        preview.innerHTML = `
-            <div>
-              <p style="text-align:center; font-size:12px; margin-bottom:5px; color:#666;">
-                ${isPending ? '⚠️ 미저장 상태 (설정 저장을 누르세요)' : '현재 적용된 CI 로고'}
-              </p>
-              <img src="${urlObj}" onerror="loadFallbackImage(this)" style="max-height:80px; max-width:100%; object-fit:contain; border:1px solid #ddd; padding:4px; border-radius:4px; margin-bottom:10px;">
-            </div>
-        `;
-        $id('ciPreview').style.display = '';
-        $id('ciPreviewImg').src = urlObj; // Update this line to use urlObj
-        $id('ciEmpty').style.display = 'none';
-        $id('ciDeleteBtn').style.display = '';
-        if ($id('ciSaveBtn')) $id('ciSaveBtn').style.display = isPending ? '' : 'none';
+        ciPreview.style.display = '';
+        if (ciPreviewImg) ciPreviewImg.src = urlObj;
+        if (ciPreviewImg) ciPreviewImg.onerror = function () { loadFallbackImage(this); };
+        if (ciEmpty) ciEmpty.style.display = 'none';
+        if (ciDeleteBtn) ciDeleteBtn.style.display = '';
+        if (ciSaveBtn) ciSaveBtn.style.display = isPending ? '' : 'none';
     } else {
-        $id('ciPreview').style.display = 'none';
-        $id('ciEmpty').style.display = '';
-        $id('ciDeleteBtn').style.display = 'none';
-        if ($id('ciSaveBtn')) $id('ciSaveBtn').style.display = 'none';
+        ciPreview.style.display = 'none';
+        if (ciEmpty) ciEmpty.style.display = '';
+        if (ciDeleteBtn) ciDeleteBtn.style.display = 'none';
+        if (ciSaveBtn) ciSaveBtn.style.display = 'none';
     }
 }
 
@@ -758,7 +732,7 @@ async function loadHistory() {
     $id('historyList').innerHTML = '';
     const userId = state.user?.userId || '';
     try {
-        const res = await fetch(`${GAS_URL}?action = list${userId ? '&userId=' + encodeURIComponent(userId) : ''} `);
+        const res = await fetch(`${GAS_URL}?action=list${userId ? '&userId=' + encodeURIComponent(userId) : ''}`);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
