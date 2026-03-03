@@ -3,7 +3,7 @@
    로그인 / 회원가입 / 검수 정보 / 사진 / 미리보기
    ============================================================ */
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwIbG3WvElogD5zSBsE-dCmh3LWENxUUPJ07sgDUvk4xuYAHwYaEo7GUCDKXDUCanZL3g/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyg0vhhxTu5_lDtJzfgb3GSzvlsv5Cyp1cHEG5Qkcgj_-4_lDauQkFeTXoGGkqz3XthNg/exec';
 
 /* ── 상태 ── */
 const state = {
@@ -857,7 +857,6 @@ async function saveEditRecord() {
     try {
         const res = await fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
         const result = await res.json();
@@ -1060,7 +1059,6 @@ async function confirmDeleteRecord() {
     try {
         const res = await fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'delete', rowId: r.rowId }),
         });
         const result = await res.json();
