@@ -654,7 +654,7 @@ function renderHistory(records) {
         const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
         const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
             const fallback = getPhotoFallbackUrl(src);
-            return `<img class="history-thumb" src="${src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}'}">`;
+            return `<img class="history-thumb" src="${src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}';}">`;
         }).join('')}${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div>` : '';
         return `
     <div class="history-card">
@@ -728,7 +728,7 @@ function renderEditPhotos() {
         const isDeleted = p.markedDelete;
         return `
         <div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}">
-            <img src="${p.src}" onerror="if(this.dataset.retried)this.parentElement.innerHTML='<div style=\"display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:11px;\">사진 로드 실패</div>';else{this.dataset.retried='1';this.src='${fallback}';}">
+            <img src="${p.src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}';}">
             ${isDeleted
                 ? `<div class="edit-photo-delete-overlay">
                      <span>삭제 예정</span>
