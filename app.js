@@ -699,7 +699,7 @@ function printRecord(r) {
   </table>
   </div>
   <div class="footer">
-    <div class="footer-left">사단법인 한국지체장애인협회 강동어울림복지관</div>
+    <div class="footer-left"></div>
     <div class="footer-right">${ciHTML}</div>
   </div>
 </div>
