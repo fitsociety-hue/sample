@@ -11,8 +11,10 @@ const DRIVE_FOLDER = '물품검수조서';
 
 /* ── GET ─────────────────────────────────────── */
 function doGet(e) {
-    const action = e.parameter.action || '';
+    // GAS 에디터에서 직접 실행 시 e가 undefined일 수 있음
+    if (!e || !e.parameter) return json({ status: 'ok', message: 'GAS is running. Use web app URL.', version: 4 });
 
+    const action = e.parameter.action || '';
     if (action === 'register') return handleRegister(e);
     if (action === 'login') return handleLogin(e);
     if (action === 'list') return handleList(e);
@@ -97,9 +99,13 @@ function handleLogin(e) {
    문서 제출
    ══════════════════════════════════════════════ */
 function handleSubmit(data) {
-    const { sheetName, sheetUrl } = writeToSpreadsheet(data);
-    addToLog(data, sheetName, sheetUrl);
-    return json({ status: 'ok', sheetName, sheetUrl });
+    try {
+        const { sheetName, sheetUrl, photoUrls } = writeToSpreadsheet(data);
+        addToLog(data, sheetName, sheetUrl, photoUrls);
+        return json({ status: 'ok', sheetName, sheetUrl });
+    } catch (err) {
+        return json({ status: 'error', message: '저장 실패: ' + err.toString() });
+    }
 }
 
 function writeToSpreadsheet(data) {
@@ -125,6 +131,7 @@ function writeToSpreadsheet(data) {
     sheet.getRange(1, 1, 1, 4).merge().setHorizontalAlignment('center').setFontSize(16).setFontWeight('bold');
 
     // 사진 → 드라이브 저장
+    const photoUrls = [];
     if (data.photos && data.photos.length) {
         const folder = getOrCreateFolder(DRIVE_FOLDER);
         data.photos.forEach((b64, i) => {
@@ -135,13 +142,17 @@ function writeToSpreadsheet(data) {
                     `${sheetName}_사진${i + 1}.jpg`
                 );
                 const file = folder.createFile(blob);
+                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                const fileId = file.getId();
+                const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                photoUrls.push(directUrl);
                 sheet.getRange(rows.length + i + 2, 1).setValue(`사진${i + 1}: ${file.getUrl()}`);
             } catch (_) { }
         });
     }
 
     SpreadsheetApp.flush();
-    return { sheetName, sheetUrl: `${SPREADSHEET_URL}#gid=${sheet.getSheetId()}` };
+    return { sheetName, sheetUrl: `${SPREADSHEET_URL}#gid=${sheet.getSheetId()}`, photoUrls };
 }
 
 /* ══════════════════════════════════════════════
@@ -152,7 +163,8 @@ function handleList(e) {
     const log = getLogSheet();
     if (!log || log.getLastRow() < 2) return json([]);
 
-    const rows = log.getRange(2, 1, log.getLastRow() - 1, 10).getValues();
+    const lastCol = log.getLastColumn();
+    const rows = log.getRange(2, 1, log.getLastRow() - 1, Math.max(lastCol, 15)).getValues();
     const result = rows
         .filter(r => !userId || r[1] === userId)
         .map(r => ({
@@ -165,11 +177,16 @@ function handleList(e) {
             teamName: r[6],
             inspectionDate: r[7],
             sheetUrl: r[9],
+            relatedDoc: r[10] || '',
+            inspectionPlace: r[11] || '',
+            buyerName: r[12] || '',
+            inspectorName: r[13] || '',
+            photoUrls: r[14] ? String(r[14]).split('|') : [],
         }));
     return json(result);
 }
 
-function addToLog(data, sheetName, sheetUrl) {
+function addToLog(data, sheetName, sheetUrl, photoUrls) {
     const log = getLogSheet();
     const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
     log.appendRow([
@@ -183,6 +200,11 @@ function addToLog(data, sheetName, sheetUrl) {
         data.inspectionDate || '',
         sheetName,
         sheetUrl,
+        data.relatedDoc || '',
+        data.inspectionPlace || '',
+        data.buyerName || '',
+        data.inspectorName || '',
+        (photoUrls || []).join('|'),
     ]);
     SpreadsheetApp.flush();
 }
@@ -206,8 +228,8 @@ function getLogSheet() {
     let s = ss.getSheetByName(LOG_SHEET);
     if (!s) {
         s = ss.insertSheet(LOG_SHEET);
-        s.appendRow(['rowId', 'userId', '제출일시', '품목', '금액', '이름', '팀명', '검수일', '시트명', '시트URL']);
-        s.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#DBEAFE');
+        s.appendRow(['rowId', 'userId', '제출일시', '품목', '금액', '이름', '팀명', '검수일', '시트명', '시트URL', '관련문서', '검수장소', '물품구매자', '검수입회자', '사진URL']);
+        s.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#DBEAFE');
     }
     return s;
 }

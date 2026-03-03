@@ -3,7 +3,7 @@
    로그인 / 회원가입 / 검수 정보 / 사진 / 미리보기
    ============================================================ */
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdHvTVKv7uzXcm-c53gWG8vicvhKz9wQ89Jhps_2rRhzHux5KBQ4nyb6BD906NxTQL/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwIbG3WvElogD5zSBsE-dCmh3LWENxUUPJ07sgDUvk4xuYAHwYaEo7GUCDKXDUCanZL3g/exec';
 
 /* ── 상태 ── */
 const state = {
@@ -210,6 +210,52 @@ function validateStep(step) {
 }
 
 /* ════════════════════════════════════════════════
+   IMAGE COMPRESSION
+   ════════════════════════════════════════════════ */
+function compressImage(dataUrl, maxWidth = 800, quality = 0.7) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
+/* ════════════════════════════════════════════════
+   DATE FORMATTING
+   ════════════════════════════════════════════════ */
+function formatKoreanDate(dateStr) {
+    if (!dateStr) return '';
+    // Handle ISO format: 2026-02-26T15:00:00.000Z
+    if (dateStr.includes('T')) {
+        const d = new Date(dateStr);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}년 ${m}월 ${day}일`;
+    }
+    // Handle YYYY-MM-DD format
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일`;
+    }
+    // Handle YYYY.MM.DD format
+    const dotParts = dateStr.split('.');
+    if (dotParts.length === 3) {
+        return `${dotParts[0]}년 ${dotParts[1]}월 ${dotParts[2]}일`;
+    }
+    return dateStr;
+}
+
+/* ════════════════════════════════════════════════
    PHOTOS
    ════════════════════════════════════════════════ */
 function handlePhotoUpload(input) {
@@ -220,8 +266,9 @@ function handlePhotoUpload(input) {
     let loaded = 0;
     toAdd.forEach(file => {
         const r = new FileReader();
-        r.onload = e => {
-            state.photos.push({ dataUrl: e.target.result });
+        r.onload = async e => {
+            const compressed = await compressImage(e.target.result);
+            state.photos.push({ dataUrl: compressed });
             if (++loaded === toAdd.length) renderPhotos();
         };
         r.readAsDataURL(file);
@@ -245,7 +292,7 @@ function renderPhotos() {
       <span class="photo-number">사진 ${i + 1}</span>
     </div>`).join('');
 
-    const labels = ['', '1장 중앙', '위아래 2장', '상허1하늀2장', '2×2 그리드'];
+    const labels = ['', '1장 중앙', '위아래 2장', '상1 하2장', '2×2 그리드'];
     $id('layoutBadge').textContent = '✓ ' + (labels[n] || '자동 배치');
 }
 
@@ -257,7 +304,7 @@ function removePhoto(i) { state.photos.splice(i, 1); renderPhotos(); }
 function buildPreview() {
     const u = state.user || {};
     const label = u.teamName ? `${u.teamName} / ${u.name}` : (u.name || '');
-    const fmt = d => d ? d.replace(/-/g, '.') : '';
+    const fmt = d => formatKoreanDate(d);
 
     const photosHTML = () => {
         if (!state.photos.length) return '<div class="doc-photo-empty">📷 사진 없음</div>';
@@ -333,16 +380,18 @@ async function submitDocument() {
     }
     $id('loadingOverlay').style.display = 'none';
     btn.disabled = false;
-    showSuccessModal(result, u);
+
+    if (result && result.status === 'ok') {
+        showSuccessModal(result, u);
+    } else {
+        const msg = result?.message || '저장 중 오류가 발생했습니다. 다시 시도해 주세요.';
+        alert('❌ 오류 발생\n' + msg);
+    }
 }
 
 function showSuccessModal(result, u) {
-    const link = result?.sheetUrl
-        ? `<a href="${result.sheetUrl}" target="_blank" class="btn btn-primary"
-         style="text-decoration:none;display:block;margin-bottom:10px;width:100%;box-sizing:border-box;">📄 저장된 문서 열기</a>`
-        : `<a href="https://docs.google.com/spreadsheets/d/1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M/edit" target="_blank"
-         class="btn btn-primary"
-         style="text-decoration:none;display:block;margin-bottom:10px;width:100%;box-sizing:border-box;">📊 스프레드시트 열기</a>`;
+    const link = `<a href="${result.sheetUrl}" target="_blank" class="btn btn-primary"
+         style="text-decoration:none;display:block;margin-bottom:10px;width:100%;box-sizing:border-box;">📄 저장된 문서 열기</a>`;
     const label = (u.teamName ? `${u.teamName} / ` : '') + (u.name || '');
     $id('successModal').style.display = 'flex';
     $id('successModal').querySelector('.modal-content').innerHTML = `
@@ -421,7 +470,34 @@ function renderHistory(records) {
 
 function printRecord(r) {
     const label = (r.teamName ? `${r.teamName} / ` : '') + (r.name || '');
-    const w = window.open('', '_blank', 'width=800,height=600');
+    const formattedDate = formatKoreanDate(r.inspectionDate || '');
+    const amount = r.itemTotal ? Number(r.itemTotal).toLocaleString('ko-KR') + '원' : '';
+
+    /* 사진 HTML 생성 - photos (data URLs) 또는 photoUrls (Drive URLs) 사용 */
+    let photosHTML = '';
+    const photoSrcs = (r.photos && r.photos.length > 0) ? r.photos : (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : [];
+    if (photoSrcs.length > 0) {
+        const n = photoSrcs.length;
+        let gridStyle = '';
+        let photoItems = '';
+        if (n === 1) {
+            gridStyle = 'display:flex; justify-content:center; align-items:center; height:100%;';
+            photoItems = `<div style="width:70%; text-align:center;"><img src="${photoSrcs[0]}" style="max-width:100%; max-height:380px; object-fit:contain;"></div>`;
+        } else if (n === 2) {
+            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:center;';
+            photoItems = photoSrcs.map(p => `<div style="width:80%;"><img src="${p}" style="width:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+        } else if (n === 3) {
+            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; gap:4px; height:100%;';
+            photoItems = `<div style="grid-column:span 2;"><img src="${photoSrcs[0]}" style="width:100%; max-height:220px; object-fit:contain;"></div>`;
+            photoItems += photoSrcs.slice(1).map(p => `<div><img src="${p}" style="width:100%; max-height:160px; object-fit:contain;"></div>`).join('');
+        } else {
+            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; height:100%;';
+            photoItems = photoSrcs.map(p => `<div><img src="${p}" style="width:100%; height:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+        }
+        photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
+    }
+
+    const w = window.open('', '_blank', 'width=800,height=900');
     w.document.write(`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -429,26 +505,59 @@ function printRecord(r) {
 <title>물품검수조서 - ${r.itemName || ''}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Malgun Gothic', Arial, sans-serif; padding: 40px; color: #111; }
-  h1 { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 24px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-  th, td { border: 1px solid #555; padding: 8px 12px; font-size: 14px; }
-  th { background: #eee; font-weight: 600; width: 25%; }
-  .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #555; }
-  .print-btn { display: block; margin: 20px auto; padding: 10px 30px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
-  @media print { .print-btn { display: none; } body { padding: 20px; } }
+  @page { size: A4; margin: 15mm; }
+  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 18mm; position: relative; }
+  .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { border: 1px solid #333; padding: 8px 10px; font-size: 13px; vertical-align: middle; }
+  .label { background: #e8e8e8; font-weight: 700; text-align: center; width: 18%; white-space: nowrap; font-size: 12px; }
+  .photo-area { height: 400px; padding: 6px !important; }
+  .sign-cell { text-align: right; padding-right: 16px !important; }
+  .seal { margin-left: 12px; color: #555; }
+  .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+  .footer img { height: 36px; margin-top: 6px; }
+  .print-btn-wrap { text-align: center; margin: 24px 0; }
+  .print-btn { padding: 12px 36px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  .print-btn:hover { background: #1D4ED8; }
+  @media print { .print-btn-wrap { display: none !important; } .page { padding: 10mm 15mm; } }
 </style>
 </head>
 <body>
-<h1>물품검수조서</h1>
-<table>
-  <tr><th>관련 문서</th><td colspan="3">${r.relatedDoc || ''}</td></tr>
-  <tr><th>품목</th><td>${r.itemName || ''}</td><th>구매금액</th><td>${r.itemTotal ? Number(r.itemTotal).toLocaleString('ko-KR') + '원' : ''}</td></tr>
-  <tr><th>검수연월일</th><td>${r.inspectionDate || ''}</td><th>제출일시</th><td>${r.submittedAt || ''}</td></tr>
-  <tr><th>작성자</th><td colspan="3">${label}</td></tr>
-</table>
-<button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
-<div class="footer">사단법인 한국지체장애인협회 강동어울림복지관</div>
+<div class="page">
+  <div class="title">물 품 검 수 조 서</div>
+  <table>
+    <tr>
+      <td class="label">관련문서</td>
+      <td colspan="3">${r.relatedDoc || ''}</td>
+    </tr>
+    <tr>
+      <td class="label">품 &nbsp; &nbsp; 목</td>
+      <td>${r.itemName || ''}</td>
+      <td class="label">구매금액</td>
+      <td>${amount}</td>
+    </tr>
+    <tr>
+      <td colspan="4" class="photo-area">${photosHTML}</td>
+    </tr>
+    <tr>
+      <td class="label">검수연월일</td>
+      <td>${formattedDate}</td>
+      <td class="label">물품구매자</td>
+      <td class="sign-cell">${r.buyerName || ''}<span class="seal">(인)</span></td>
+    </tr>
+    <tr>
+      <td class="label">검 수 장 소</td>
+      <td>${r.inspectionPlace || ''}</td>
+      <td class="label">검수입회자</td>
+      <td class="sign-cell">${r.inspectorName || ''}<span class="seal">(인)</span></td>
+    </tr>
+  </table>
+  <div class="footer">사단법인 한국지체장애인협회 강동어울림복지관</div>
+</div>
+<div class="print-btn-wrap">
+  <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+</div>
 </body>
 </html>`);
     w.document.close();

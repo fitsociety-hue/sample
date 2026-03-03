@@ -1299,7 +1299,9 @@ body {
 }
 
 .preview-photo-grid.grid-1 {
-    grid-template-columns: 1fr;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .preview-photo-grid.grid-2 {
@@ -1322,7 +1324,7 @@ body {
 
 .preview-photo {
     overflow: hidden;
-    background: #f0f0f0;
+    background: transparent;
 }
 
 .preview-photo img {
@@ -1498,11 +1500,14 @@ body {
 .photo-grid.grid-1 {
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
 .photo-grid.grid-1 .photo-item {
     width: 80%;
-    padding-top: 54%;
+    max-width: 500px;
+    aspect-ratio: 4/3;
+    padding-top: 0;
 }
 
 /* 2장: 위아래 세로 배치 */
@@ -1553,7 +1558,7 @@ body {
     position: relative;
     border-radius: 12px;
     overflow: hidden;
-    background: var(--gray-100);
+    background: transparent;
 }
 
 .photo-item img {
@@ -1570,13 +1575,25 @@ body {
 .preview-photo-grid.grid-1 {
     display: flex;
     justify-content: center;
-    height: auto;
+    align-items: center;
+    height: 320px;
     gap: 0;
 }
 
 .preview-photo-grid.grid-1 .preview-photo {
-    width: 80%;
-    aspect-ratio: 4/3;
+    width: auto;
+    max-width: 90%;
+    height: auto;
+    max-height: 100%;
+    background: transparent;
+}
+
+.preview-photo-grid.grid-1 .preview-photo img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 310px;
+    object-fit: contain;
 }
 
 /* 2장: 위아래 세로 배치, 중앙 정렬 */
@@ -1626,7 +1643,7 @@ body {
 
 .preview-photo {
     overflow: hidden;
-    background: #f0f0f0;
+    background: transparent;
 }
 
 .preview-photo img {
