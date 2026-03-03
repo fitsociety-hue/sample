@@ -344,6 +344,50 @@ function getPhotoFallbackUrl(url) {
 }
 
 /* ════════════════════════════════════════════════
+   GAS IMAGE PROXY (크로스 디바이스 권한 우회)
+   ════════════════════════════════════════════════ */
+async function loadFallbackImage(imgElement) {
+    if (imgElement.dataset.retried) return;
+    imgElement.dataset.retried = '1';
+
+    const srcUrl = imgElement.src;
+    let fileId = '';
+
+    // Drive file ID 추출
+    let m = srcUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+    if (!m) m = srcUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (!m) m = srcUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m) fileId = m[1];
+
+    if (!fileId) {
+        imgElement.style.display = 'none';
+        return;
+    }
+
+    const cacheKey = 'gi_photo_' + fileId;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+        imgElement.src = cached;
+        return;
+    }
+
+    try {
+        const res = await fetch(`${GAS_URL}?action=get_image&fileId=${fileId}`);
+        const result = await res.json();
+        if (result.status === 'ok' && result.dataUrl) {
+            localStorage.setItem(cacheKey, result.dataUrl);
+            imgElement.src = result.dataUrl;
+        } else {
+            // fallback to thumbnail if proxy fails
+            imgElement.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+        }
+    } catch (e) {
+        console.error('Proxy image load failed:', e);
+        imgElement.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+    }
+}
+
+/* ════════════════════════════════════════════════
    PHOTOS
    ════════════════════════════════════════════════ */
 function handlePhotoUpload(input) {
@@ -594,9 +638,8 @@ function handleCIUpload(event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/png', 0.9);
-            localStorage.setItem('gi_ci_image', dataUrl);
+            localStorage.setItem('gi_ci_image_pending', dataUrl);
             loadCIPreview();
-            syncCIToServer(dataUrl);
         };
         img.src = e.target.result;
     };
@@ -605,10 +648,31 @@ function handleCIUpload(event) {
 }
 
 function deleteCIImage() {
-    if (!confirm('CI 이미지를 삭제하시겠습니까?')) return;
+    if (!confirm('CI 이미지를 삭제하고 설정을 저장하시겠습니까?')) return;
+    localStorage.removeItem('gi_ci_image_pending');
     localStorage.removeItem('gi_ci_image');
     loadCIPreview();
     syncCIToServer('');
+    showToast('CI 이미지가 삭제되었습니다.');
+}
+
+async function saveCIImage() {
+    const pendingData = localStorage.getItem('gi_ci_image_pending');
+    if (!pendingData) return;
+
+    const btn = $id('ciSaveBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+
+    // 서버로 동기화
+    await syncCIToServer(pendingData);
+
+    // 확정
+    localStorage.setItem('gi_ci_image', pendingData);
+    localStorage.removeItem('gi_ci_image_pending');
+
+    if (btn) { btn.disabled = false; btn.textContent = '💾 설정 저장'; }
+    showToast('새로운 CI 이미지가 저장되었습니다.');
+    loadCIPreview();
 }
 
 async function syncCIToServer(ciImage) {
@@ -628,16 +692,21 @@ async function syncCIToServer(ciImage) {
 }
 
 function loadCIPreview() {
-    const ciData = localStorage.getItem('gi_ci_image');
+    const pendingData = localStorage.getItem('gi_ci_image_pending');
+    const ciData = pendingData || localStorage.getItem('gi_ci_image');
+    const saveBtn = $id('ciSaveBtn');
+
     if (ciData) {
         $id('ciPreview').style.display = '';
         $id('ciPreviewImg').src = ciData;
         $id('ciEmpty').style.display = 'none';
         $id('ciDeleteBtn').style.display = '';
+        if (saveBtn) saveBtn.style.display = pendingData ? '' : 'none';
     } else {
         $id('ciPreview').style.display = 'none';
         $id('ciEmpty').style.display = '';
         $id('ciDeleteBtn').style.display = 'none';
+        if (saveBtn) saveBtn.style.display = 'none';
     }
 }
 
@@ -688,8 +757,7 @@ function renderHistory(records) {
         // Drive URL 변환 적용
         const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
         const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
-            const fallback = getPhotoFallbackUrl(src);
-            return `<img class="history-thumb" src="${src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}';}">`;
+            return `<img class="history-thumb" src="${src}" onerror="loadFallbackImage(this)">`;
         }).join('')}${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div>` : '';
         return `
     <div class="history-card">
@@ -763,7 +831,7 @@ function renderEditPhotos() {
         const isDeleted = p.markedDelete;
         return `
         <div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}">
-            <img src="${p.src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}';}">
+            <img src="${p.src}" onerror="loadFallbackImage(this)">
             ${isDeleted
                 ? `<div class="edit-photo-delete-overlay">
                      <span>삭제 예정</span>
@@ -910,25 +978,37 @@ function printRecord(r) {
     /* 사진 HTML 생성 - photos (data URLs) 또는 photoUrls (Drive URLs) 사용 */
     let photosHTML = '';
     const rawPhotoSrcs = (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : (r.photos && r.photos.length > 0) ? r.photos : [];
-    // Drive URL 변환 적용
-    const photoSrcs = rawPhotoSrcs.map(src => getReliablePhotoUrl(src));
+
+    // Drive URL 변환 적용 및 로컬 캐시 확인
+    const photoSrcs = rawPhotoSrcs.map(src => {
+        const reliable = getReliablePhotoUrl(src);
+        let m = reliable.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = reliable.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = reliable.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (m) {
+            const cached = localStorage.getItem('gi_photo_' + m[1]);
+            if (cached) return cached;
+        }
+        return reliable;
+    });
+
     if (photoSrcs.length > 0) {
         const n = photoSrcs.length;
         let gridStyle = '';
         let photoItems = '';
         if (n === 1) {
             gridStyle = 'display:flex; justify-content:center; align-items:center; height:100%;';
-            photoItems = `<div style="width:70%; text-align:center;"><img src="${photoSrcs[0]}" style="max-width:100%; max-height:380px; object-fit:contain;"></div>`;
+            photoItems = `<div style="width:70%; text-align:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:380px; object-fit:contain;"></div>`;
         } else if (n === 2) {
             gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:center;';
-            photoItems = photoSrcs.map(p => `<div style="width:80%;"><img src="${p}" style="width:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+            photoItems = photoSrcs.map(p => `<div style="width:80%;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:190px; object-fit:contain;"></div>`).join('');
         } else if (n === 3) {
             gridStyle = 'display:grid; grid-template-columns:1fr 1fr; gap:4px; height:100%;';
-            photoItems = `<div style="grid-column:span 2;"><img src="${photoSrcs[0]}" style="width:100%; max-height:220px; object-fit:contain;"></div>`;
-            photoItems += photoSrcs.slice(1).map(p => `<div><img src="${p}" style="width:100%; max-height:160px; object-fit:contain;"></div>`).join('');
+            photoItems = `<div style="grid-column:span 2;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; max-height:220px; object-fit:contain;"></div>`;
+            photoItems += photoSrcs.slice(1).map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:160px; object-fit:contain;"></div>`).join('');
         } else {
             gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; height:100%;';
-            photoItems = photoSrcs.map(p => `<div><img src="${p}" style="width:100%; height:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+            photoItems = photoSrcs.map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; max-height:190px; object-fit:contain;"></div>`).join('');
         }
         photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
     }
@@ -981,6 +1061,33 @@ function printRecord(r) {
     .page { max-width: 210mm; margin: 0 auto; padding: 20mm 15mm; min-height: 297mm; }
   }
 </style>
+<script>
+const GAS_URL = '${GAS_URL}';
+async function loadFallback(img) {
+    if (img.dataset.retried) return;
+    img.dataset.retried = '1';
+    let id = '';
+    let m = img.src.match(/lh3\\.googleusercontent\\.com\\/d\\/([a-zA-Z0-9_-]+)/);
+    if (!m) m = img.src.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+    if (!m) m = img.src.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m) id = m[1];
+    
+    if (id) {
+        try { // 로컬 스토리지에 있으면 바로 사용
+            const cached = window.opener && window.opener.localStorage ? window.opener.localStorage.getItem('gi_photo_' + id) : null;
+            if (cached) { img.src = cached; return; }
+        } catch(e) {}
+        try {
+            const res = await fetch(GAS_URL + '?action=get_image&fileId=' + id);
+            const data = await res.json();
+            if (data.status === 'ok' && data.dataUrl) img.src = data.dataUrl;
+            else img.src = 'https://drive.google.com/thumbnail?id='+id+'&sz=w800';
+        } catch(e) {
+            img.src = 'https://drive.google.com/thumbnail?id='+id+'&sz=w800';
+        }
+    }
+}
+</script>
 </head>
 <body>
 <div class="page">

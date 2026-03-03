@@ -276,7 +276,9 @@
                                 <input type="file" id="ciInput" accept="image/*" style="display:none;"
                                     onchange="handleCIUpload(event)">
                                 <button class="btn btn-primary btn-small"
-                                    onclick="document.getElementById('ciInput').click()">📁 CI 이미지 업로드</button>
+                                    onclick="document.getElementById('ciInput').click()">📁 CI 이미지 첨부</button>
+                                <button class="btn btn-submit btn-small" id="ciSaveBtn" style="display:none;"
+                                    onclick="saveCIImage()">💾 설정 저장</button>
                                 <button class="btn btn-outline btn-small" id="ciDeleteBtn" style="display:none;"
                                     onclick="deleteCIImage()">🗑️ 삭제</button>
                             </div>

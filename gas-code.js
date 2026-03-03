@@ -19,6 +19,7 @@ function doGet(e) {
     if (action === 'login') return handleLogin(e);
     if (action === 'list') return handleList(e);
     if (action === 'get_ci') return handleGetCI(e);
+    if (action === 'get_image') return handleGetImage(e);
 
     return json({ status: 'ok', version: 4 });
 }
@@ -116,6 +117,27 @@ function handleGetCI(e) {
         }
     }
     return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
+}
+
+/* ══════════════════════════════════════════════
+   이미지 프록시 (Drive 파일 Base64 변환 후 반환)
+   ══════════════════════════════════════════════ */
+function handleGetImage(e) {
+    const fileId = e.parameter.fileId;
+    if (!fileId) return json({ status: 'error', message: 'fileId가 필요합니다' });
+
+    try {
+        const file = DriveApp.getFileById(fileId);
+        const blob = file.getBlob();
+        const base64 = Utilities.base64Encode(blob.getBytes());
+        const mimeType = blob.getContentType();
+        return json({
+            status: 'ok',
+            dataUrl: `data:${mimeType};base64,${base64}`
+        });
+    } catch (err) {
+        return json({ status: 'error', message: err.toString() });
+    }
 }
 
 /* ══════════════════════════════════════════════
