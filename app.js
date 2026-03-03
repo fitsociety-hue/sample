@@ -351,6 +351,46 @@ function buildPreview() {
 /* ════════════════════════════════════════════════
    SUBMIT
    ════════════════════════════════════════════════ */
+/* ── 로컬 캐시 (인쇄용) ── */
+function saveSubmissionToLocal(payload) {
+    try {
+        const cache = JSON.parse(localStorage.getItem('gi_submissions') || '{}');
+        const key = `${payload.itemName}_${payload.inspectionDate}_${payload.userId}`;
+        cache[key] = {
+            relatedDoc: payload.relatedDoc,
+            itemName: payload.itemName,
+            itemTotal: payload.itemTotal,
+            inspectionDate: payload.inspectionDate,
+            inspectionPlace: payload.inspectionPlace,
+            buyerName: payload.buyerName,
+            inspectorName: payload.inspectorName,
+            name: payload.name,
+            teamName: payload.teamName,
+            photos: payload.photos,
+            savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('gi_submissions', JSON.stringify(cache));
+    } catch (_) { /* quota exceeded 등 무시 */ }
+}
+
+function getLocalSubmission(r) {
+    try {
+        const cache = JSON.parse(localStorage.getItem('gi_submissions') || '{}');
+        // inspectionDate 형식 정규화하여 매칭
+        const normalizeDate = d => {
+            if (!d) return '';
+            if (d.includes('T')) return d.split('T')[0];
+            return d.replace(/\./g, '-');
+        };
+        const key = `${r.itemName}_${normalizeDate(r.inspectionDate)}_${r.userId}`;
+        if (cache[key]) return cache[key];
+        // fallback: itemName + userId로 최근 매칭 시도
+        const matches = Object.values(cache).filter(c => c.itemName === r.itemName && (c.name === r.name || !r.name));
+        if (matches.length) return matches[matches.length - 1];
+    } catch (_) { }
+    return null;
+}
+
 async function submitDocument() {
     const btn = $id('submitBtn');
     btn.disabled = true;
@@ -382,6 +422,7 @@ async function submitDocument() {
     btn.disabled = false;
 
     if (result && result.status === 'ok') {
+        saveSubmissionToLocal(payload);
         showSuccessModal(result, u);
     } else {
         const msg = result?.message || '저장 중 오류가 발생했습니다. 다시 시도해 주세요.';
@@ -449,7 +490,24 @@ function renderHistory(records) {
     $id('historyLoading').style.display = 'none';
     if (!records?.length) { $id('historyEmpty').style.display = ''; return; }
     $id('historyEmpty').style.display = 'none';
-    $id('historyList').innerHTML = [...records].reverse().map((r, i) => `
+
+    // 서버 데이터 + 로컬 캐시 병합
+    const enriched = records.map(r => {
+        const local = getLocalSubmission(r);
+        if (local) {
+            return {
+                ...r,
+                relatedDoc: r.relatedDoc || local.relatedDoc || '',
+                inspectionPlace: r.inspectionPlace || local.inspectionPlace || '',
+                buyerName: r.buyerName || local.buyerName || '',
+                inspectorName: r.inspectorName || local.inspectorName || '',
+                photos: (r.photos && r.photos.length) ? r.photos : (local.photos || []),
+            };
+        }
+        return r;
+    });
+
+    $id('historyList').innerHTML = [...enriched].reverse().map((r, i) => `
     <div class="history-card">
       <div class="history-header">
         <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
@@ -469,6 +527,18 @@ function renderHistory(records) {
 }
 
 function printRecord(r) {
+    /* 로컬 캐시에서 누락 데이터 보완 */
+    const local = getLocalSubmission(r);
+    if (local) {
+        r.relatedDoc = r.relatedDoc || local.relatedDoc || '';
+        r.inspectionPlace = r.inspectionPlace || local.inspectionPlace || '';
+        r.buyerName = r.buyerName || local.buyerName || '';
+        r.inspectorName = r.inspectorName || local.inspectorName || '';
+        if ((!r.photos || !r.photos.length) && local.photos && local.photos.length) {
+            r.photos = local.photos;
+        }
+    }
+
     const label = (r.teamName ? `${r.teamName} / ` : '') + (r.name || '');
     const formattedDate = formatKoreanDate(r.inspectionDate || '');
     const amount = r.itemTotal ? Number(r.itemTotal).toLocaleString('ko-KR') + '원' : '';
@@ -505,22 +575,27 @@ function printRecord(r) {
 <title>물품검수조서 - ${r.itemName || ''}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  @page { size: A4; margin: 15mm; }
-  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 18mm; position: relative; }
-  .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 20px; }
+  @page { size: A4; margin: 10mm 15mm; }
+  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; margin: 0; padding: 0; }
+  .page { max-width: 190mm; margin: 0 auto; padding: 12mm 10mm; }
+  .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 16px; }
   table { width: 100%; border-collapse: collapse; }
-  td { border: 1px solid #333; padding: 8px 10px; font-size: 13px; vertical-align: middle; }
+  td { border: 1px solid #333; padding: 7px 10px; font-size: 13px; vertical-align: middle; }
   .label { background: #e8e8e8; font-weight: 700; text-align: center; width: 18%; white-space: nowrap; font-size: 12px; }
-  .photo-area { height: 400px; padding: 6px !important; }
+  .photo-area { height: auto; min-height: 300px; max-height: 520px; padding: 6px !important; overflow: hidden; }
+  .photo-area img { max-height: 500px; }
   .sign-cell { text-align: right; padding-right: 16px !important; }
   .seal { margin-left: 12px; color: #555; }
-  .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-  .footer img { height: 36px; margin-top: 6px; }
-  .print-btn-wrap { text-align: center; margin: 24px 0; }
+  .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+  .print-btn-wrap { text-align: center; margin: 20px 0; }
   .print-btn { padding: 12px 36px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
   .print-btn:hover { background: #1D4ED8; }
-  @media print { .print-btn-wrap { display: none !important; } .page { padding: 10mm 15mm; } }
+  @media print {
+    .print-btn-wrap { display: none !important; }
+    body { margin: 0; padding: 0; }
+    .page { padding: 0; max-width: 100%; }
+    .photo-area { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
