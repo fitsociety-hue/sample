@@ -1158,14 +1158,75 @@ body {
     }
 }
 
-/* ===== Responsive ===== */
+/* ===== Responsive — 스마트폰 (≤600px) ===== */
 @media (max-width: 600px) {
+    .header-content {
+        padding: 10px 14px;
+    }
+
+    .logo-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+        border-radius: 8px;
+    }
+
+    .app-header h1 {
+        font-size: 1rem;
+    }
+
+    .subtitle {
+        font-size: .65rem;
+    }
+
+    .logo-area {
+        gap: 8px;
+    }
+
+    .tab-nav {
+        gap: 0;
+    }
+
+    .nav-tab {
+        padding: 10px 6px;
+        font-size: .78rem;
+    }
+
     .container {
-        padding: 18px 12px 50px;
+        padding: 14px 10px 50px;
+    }
+
+    .card-header {
+        padding: 14px 14px 0;
+    }
+
+    .card-header h2 {
+        font-size: .92rem;
+    }
+
+    .card-body {
+        padding: 12px 14px 16px;
     }
 
     .form-row {
         grid-template-columns: 1fr;
+    }
+
+    .form-group label {
+        font-size: .78rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group input[type="password"],
+    .form-group select {
+        padding: 10px 12px;
+        font-size: .88rem;
+    }
+
+    .progress-bar {
+        padding: 12px 10px;
+        margin-bottom: 16px;
     }
 
     .progress-step span {
@@ -1178,21 +1239,139 @@ body {
         font-size: .7rem;
     }
 
+    .progress-line {
+        margin: 0 4px 16px;
+    }
+
+    .upload-area {
+        padding: 20px 14px;
+    }
+
+    .upload-text {
+        font-size: .82rem;
+    }
+
     .doc-title {
         font-size: 1.1rem;
         letter-spacing: 3px;
     }
 
+    .doc-table th,
+    .doc-table td {
+        padding: 5px 6px;
+        font-size: .7rem;
+    }
+
+    .doc-table .label-cell {
+        width: 26%;
+        font-size: 10px;
+    }
+
+    .doc-photo-area {
+        min-height: 180px;
+    }
+
+    .preview-photo-grid {
+        height: 200px;
+    }
+
+    .doc-photo-cell {
+        height: 200px;
+    }
+
     .btn {
-        padding: 11px 18px;
-        font-size: .85rem;
+        padding: 10px 16px;
+        font-size: .82rem;
     }
 
     .btn-submit {
-        padding: 13px 22px;
+        padding: 12px 20px;
+        font-size: .88rem;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: .72rem;
+    }
+
+    .step-nav {
+        gap: 8px;
+    }
+
+    /* History */
+    .history-card {
+        padding: 12px 14px;
+    }
+
+    .history-item-name {
+        font-size: .9rem;
+    }
+
+    .history-badge {
+        font-size: .68rem;
+        padding: 2px 7px;
+    }
+
+    .history-link {
+        padding: 8px 10px;
+        font-size: .78rem;
+    }
+
+    .history-panel-header {
+        padding: 14px 4px 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .history-actions {
+        flex-direction: column;
+    }
+
+    /* Auth section */
+    .auth-section {
+        padding: 16px;
+    }
+
+    .auth-section h1 {
+        font-size: 1.2rem;
+    }
+
+    /* Photo grid */
+    .photo-grid.grid-2,
+    .photo-grid.grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .photo-grid.grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .photo-grid.grid-3 .photo-item:first-child {
+        grid-column: auto;
+    }
+
+    /* CI settings */
+    .ci-upload-area {
+        padding: 14px;
+    }
+
+    .ci-preview {
+        max-width: 100%;
+    }
+
+    /* Modal */
+    .modal-content {
+        padding: 28px 20px;
+        max-width: 300px;
+    }
+
+    .signature-canvas {
+        height: 120px;
     }
 }
 
+/* ===== Responsive — 소형 스마트폰 (≤400px) ===== */
 @media (max-width: 400px) {
     .pin-input {
         width: 44px !important;
@@ -1204,11 +1383,52 @@ body {
         min-width: 8px;
         margin: 0 3px 16px;
     }
+
+    .nav-tab {
+        padding: 9px 4px;
+        font-size: .72rem;
+    }
+
+    .header-content {
+        padding: 8px 10px;
+    }
+
+    .app-header h1 {
+        font-size: .9rem;
+    }
+
+    .container {
+        padding: 10px 8px 44px;
+    }
+
+    .card-header {
+        padding: 12px 12px 0;
+    }
+
+    .card-body {
+        padding: 10px 12px 14px;
+    }
+
+    .history-actions {
+        flex-direction: column;
+    }
+
+    .history-link {
+        font-size: .74rem;
+    }
 }
 
-@media (min-width: 768px) {
+/* ===== Responsive — 태블릿 (768px ~ 1023px) ===== */
+@media (min-width: 768px) and (max-width: 1023px) {
+
+    .header-content,
+    .tab-nav,
     .container {
-        padding: 28px 24px 60px;
+        max-width: 720px;
+    }
+
+    .container {
+        padding: 24px 24px 60px;
     }
 
     .card-body {
@@ -1217,6 +1437,101 @@ body {
 
     .header-content {
         padding: 16px 24px;
+    }
+
+    .photo-grid.grid-2,
+    .photo-grid.grid-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .preview-photo-grid {
+        height: 340px;
+    }
+}
+
+/* ===== Responsive — 데스크탑 (≥1024px) ===== */
+@media (min-width: 1024px) {
+
+    .header-content,
+    .tab-nav,
+    .container {
+        max-width: 780px;
+    }
+
+    .container {
+        padding: 32px 28px 64px;
+    }
+
+    .card-header {
+        padding: 24px 28px 0;
+    }
+
+    .card-body {
+        padding: 20px 28px 28px;
+    }
+
+    .header-content {
+        padding: 16px 28px;
+    }
+
+    .app-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .nav-tab {
+        padding: 14px 20px;
+        font-size: .95rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group input[type="password"],
+    .form-group select {
+        padding: 12px 16px;
+        font-size: .95rem;
+    }
+
+    .form-group label {
+        font-size: .88rem;
+    }
+
+    .btn {
+        padding: 13px 28px;
+        font-size: .92rem;
+    }
+
+    .btn-submit {
+        padding: 15px 36px;
+        font-size: 1rem;
+    }
+
+    .photo-grid.grid-2,
+    .photo-grid.grid-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .preview-photo-grid {
+        height: 380px;
+    }
+
+    .doc-photo-cell {
+        height: 360px;
+    }
+
+    .history-card {
+        padding: 18px 22px;
+    }
+
+    .signature-canvas {
+        height: 160px;
+    }
+
+    .modal-content {
+        max-width: 400px;
+    }
+
+    .ci-preview {
+        max-width: 350px;
     }
 }
 
