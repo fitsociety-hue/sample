@@ -27,6 +27,7 @@ function doPost(e) {
     try {
         const data = JSON.parse(e.postData.contents);
         if (data.action === 'register') return handleRegisterPost(data);
+        if (data.action === 'update') return handleUpdate(data);
         return handleSubmit(data);
     } catch (err) {
         return json({ status: 'error', message: err.toString() });
@@ -207,6 +208,70 @@ function addToLog(data, sheetName, sheetUrl, photoUrls) {
         (photoUrls || []).join('|'),
     ]);
     SpreadsheetApp.flush();
+}
+
+/* ══════════════════════════════════════════════
+   기록 수정
+   ══════════════════════════════════════════════ */
+function handleUpdate(data) {
+    try {
+        const rowId = data.rowId;
+        if (!rowId) return json({ status: 'error', message: 'rowId가 없습니다' });
+
+        const log = getLogSheet();
+        const rows = log.getDataRange().getValues();
+        let targetRow = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === rowId) { targetRow = i + 1; break; }
+        }
+        if (targetRow < 0) return json({ status: 'error', message: '해당 기록을 찾을 수 없습니다' });
+
+        // 필드 업데이트
+        log.getRange(targetRow, 4).setValue(data.itemName || '');
+        log.getRange(targetRow, 5).setValue(data.itemTotal || '');
+        log.getRange(targetRow, 8).setValue(data.inspectionDate || '');
+        log.getRange(targetRow, 11).setValue(data.relatedDoc || '');
+        log.getRange(targetRow, 12).setValue(data.inspectionPlace || '');
+        log.getRange(targetRow, 13).setValue(data.buyerName || '');
+        log.getRange(targetRow, 14).setValue(data.inspectorName || '');
+
+        // 기존 사진 URL
+        let photoUrls = rows[targetRow - 1][14] ? String(rows[targetRow - 1][14]).split('|') : [];
+
+        // 삭제할 사진 인덱스 처리 (먼저 삭제)
+        if (data.deletePhotoIndexes && data.deletePhotoIndexes.length > 0) {
+            const sorted = [...data.deletePhotoIndexes].sort((a, b) => b - a);
+            sorted.forEach(idx => {
+                if (idx >= 0 && idx < photoUrls.length) photoUrls.splice(idx, 1);
+            });
+        }
+
+        // 새 사진 업로드
+        if (data.newPhotos && data.newPhotos.length > 0) {
+            const folder = getOrCreateFolder(DRIVE_FOLDER);
+            const sheetName = rows[targetRow - 1][8] || 'edit';
+            data.newPhotos.forEach((b64, i) => {
+                try {
+                    const blob = Utilities.newBlob(
+                        Utilities.base64Decode(b64.split(',')[1]),
+                        'image/jpeg',
+                        `${sheetName}_수정사진${photoUrls.length + i + 1}.jpg`
+                    );
+                    const file = folder.createFile(blob);
+                    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                    const fileId = file.getId();
+                    photoUrls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
+                } catch (_) { }
+            });
+        }
+
+        log.getRange(targetRow, 15).setValue(photoUrls.join('|'));
+        SpreadsheetApp.flush();
+
+        return json({ status: 'ok', photoUrls });
+    } catch (err) {
+        return json({ status: 'error', message: '수정 실패: ' + err.toString() });
+    }
 }
 
 /* ══════════════════════════════════════════════

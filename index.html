@@ -297,6 +297,64 @@
                 <div class="modal-content"></div>
             </div>
 
+            <!-- Edit Modal -->
+            <div class="edit-modal-overlay" id="editModal" style="display:none;">
+                <div class="edit-modal">
+                    <div class="edit-modal-header">
+                        <h2>✏️ 기록 수정</h2>
+                        <button class="edit-modal-close" onclick="closeEditModal()">&times;</button>
+                    </div>
+                    <div class="edit-modal-body">
+                        <div class="form-group">
+                            <label>관련 문서</label>
+                            <input type="text" id="editRelatedDoc">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>품목</label>
+                                <input type="text" id="editItemName">
+                            </div>
+                            <div class="form-group">
+                                <label>구매금액</label>
+                                <input type="text" id="editItemTotal" inputmode="numeric">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>검수연월일</label>
+                                <input type="date" id="editInspectionDate">
+                            </div>
+                            <div class="form-group">
+                                <label>검수장소</label>
+                                <input type="text" id="editInspectionPlace">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>물품구매자</label>
+                                <input type="text" id="editBuyerName">
+                            </div>
+                            <div class="form-group">
+                                <label>검수입회자</label>
+                                <input type="text" id="editInspectorName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>사진</label>
+                            <div class="edit-photo-grid" id="editPhotoGrid"></div>
+                            <input type="file" id="editPhotoInput" accept="image/*" multiple style="display:none;"
+                                onchange="handleEditPhotoUpload(event)">
+                            <button class="btn btn-outline btn-small" style="margin-top:10px;"
+                                onclick="document.getElementById('editPhotoInput').click()">+ 사진 추가</button>
+                        </div>
+                    </div>
+                    <div class="edit-modal-footer">
+                        <button class="btn btn-outline" onclick="closeEditModal()">취소</button>
+                        <button class="btn btn-primary" id="editSaveBtn" onclick="saveEditRecord()">💾 저장</button>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div><!-- /#mainWrapper -->
 

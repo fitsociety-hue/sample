@@ -10,6 +10,10 @@ const state = {
     user: null,       // { userId, name, teamName }
     currentStep: 1,
     photos: [],
+    editRecord: null,
+    editPhotos: [],       // { src, type:'existing'|'new', originalIndex? }
+    editNewPhotos: [],    // data URLs of newly added photos
+    editDeleteIndexes: [], // indexes of existing photos to delete
 };
 
 /* ── 헬퍼 ── */
@@ -391,6 +395,23 @@ function getLocalSubmission(r) {
     return null;
 }
 
+function saveSubmissionToLocal(data) {
+    try {
+        const cache = JSON.parse(localStorage.getItem('gi_submissions') || '{}');
+        const normalizeDate = d => {
+            if (!d) return '';
+            if (d.includes('T')) return d.split('T')[0];
+            return d.replace(/\./g, '-');
+        };
+        const key = `${data.itemName}_${normalizeDate(data.inspectionDate)}_${data.userId}`;
+        cache[key] = {
+            ...data,
+            _savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('gi_submissions', JSON.stringify(cache));
+    } catch (_) { }
+}
+
 async function submitDocument() {
     const btn = $id('submitBtn');
     btn.disabled = true;
@@ -557,7 +578,13 @@ function renderHistory(records) {
         return r;
     });
 
-    $id('historyList').innerHTML = [...enriched].reverse().map((r, i) => `
+    // 전역 참조용으로 저장
+    window._historyRecords = [...enriched].reverse();
+
+    $id('historyList').innerHTML = window._historyRecords.map((r, i) => {
+        const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
+        const thumbsHTML = photoSrcs.length ? `<div class="history-photos">${photoSrcs.slice(0, 4).map(src => `<img class="history-thumb" src="${src}" onerror="this.style.display='none'">`).join('')}${photoSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${photoSrcs.length - 4}</span>` : ''}</div>` : '';
+        return `
     <div class="history-card">
       <div class="history-header">
         <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
@@ -569,11 +596,160 @@ function renderHistory(records) {
         ${r.itemTotal ? `<span class="history-badge">💰 ${Number(r.itemTotal || 0).toLocaleString('ko-KR')}원</span>` : ''}
         ${r.inspectionDate ? `<span class="history-badge">📅 ${r.inspectionDate}</span>` : ''}
       </div>
+      ${thumbsHTML}
       <div class="history-actions">
+        <button class="history-link" onclick="openEditRecord(${i})">✏️ 수정</button>
         ${r.sheetUrl ? `<a href="${r.sheetUrl}" target="_blank" class="history-link">📄 열기</a>` : ''}
-        <button class="history-link history-print-btn" onclick="printRecord(${JSON.stringify(r).replace(/"/g, '&quot;')})">🖨️ 인쇄/PDF</button>
+        <button class="history-link history-print-btn" onclick="printRecord(window._historyRecords[${i}])">🖨️ 인쇄/PDF</button>
       </div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
+}
+
+/* ════════════════════════════════════════════════
+   기록 수정 모달
+   ════════════════════════════════════════════════ */
+function openEditRecord(index) {
+    const r = window._historyRecords[index];
+    if (!r) return;
+    state.editRecord = { ...r, _index: index };
+    state.editNewPhotos = [];
+    state.editDeleteIndexes = [];
+
+    // 기존 사진 목록 구성
+    const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
+    state.editPhotos = photoSrcs.map((src, i) => ({ src, type: 'existing', originalIndex: i }));
+
+    // 폼 필드 채우기
+    setVal('editRelatedDoc', r.relatedDoc || '');
+    setVal('editItemName', r.itemName || '');
+    setVal('editItemTotal', r.itemTotal || '');
+    setVal('editInspectionPlace', r.inspectionPlace || '');
+    setVal('editBuyerName', r.buyerName || '');
+    setVal('editInspectorName', r.inspectorName || '');
+
+    // 날짜 처리
+    let dateVal = r.inspectionDate || '';
+    if (dateVal.includes('T')) dateVal = dateVal.split('T')[0];
+    if (dateVal.includes('.')) dateVal = dateVal.replace(/\./g, '-');
+    setVal('editInspectionDate', dateVal);
+
+    renderEditPhotos();
+    $id('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    $id('editModal').style.display = 'none';
+    state.editRecord = null;
+    state.editPhotos = [];
+    state.editNewPhotos = [];
+    state.editDeleteIndexes = [];
+}
+
+function renderEditPhotos() {
+    const grid = $id('editPhotoGrid');
+    if (!grid) return;
+    grid.innerHTML = state.editPhotos.map((p, i) => `
+        <div class="edit-photo-item">
+            <img src="${p.src}" onerror="this.parentElement.innerHTML='<div style=\\"display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:11px;\\">사진 로드 실패</div>'">
+            <button class="edit-photo-remove" onclick="removeEditPhoto(${i})">&times;</button>
+        </div>
+    `).join('');
+}
+
+async function handleEditPhotoUpload(event) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    if (state.editPhotos.length + files.length > 4) {
+        showToast('사진은 최대 4장까지 가능합니다', 'error');
+        event.target.value = '';
+        return;
+    }
+    for (const file of files) {
+        const dataUrl = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        const compressed = await compressImage(dataUrl);
+        state.editPhotos.push({ src: compressed, type: 'new' });
+        state.editNewPhotos.push(compressed);
+    }
+    renderEditPhotos();
+    event.target.value = '';
+}
+
+function removeEditPhoto(index) {
+    const photo = state.editPhotos[index];
+    if (photo.type === 'existing') {
+        state.editDeleteIndexes.push(photo.originalIndex);
+    } else {
+        const newIdx = state.editNewPhotos.indexOf(photo.src);
+        if (newIdx >= 0) state.editNewPhotos.splice(newIdx, 1);
+    }
+    state.editPhotos.splice(index, 1);
+    renderEditPhotos();
+}
+
+async function saveEditRecord() {
+    const r = state.editRecord;
+    if (!r || !r.rowId) {
+        showToast('수정할 수 없는 기록입니다', 'error');
+        return;
+    }
+
+    const btn = $id('editSaveBtn');
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+
+    const payload = {
+        action: 'update',
+        rowId: r.rowId,
+        itemName: getVal('editItemName'),
+        itemTotal: getVal('editItemTotal'),
+        inspectionDate: getVal('editInspectionDate'),
+        relatedDoc: getVal('editRelatedDoc'),
+        inspectionPlace: getVal('editInspectionPlace'),
+        buyerName: getVal('editBuyerName'),
+        inspectorName: getVal('editInspectorName'),
+        newPhotos: state.editNewPhotos,
+        deletePhotoIndexes: state.editDeleteIndexes,
+    };
+
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        if (result.status === 'ok') {
+            // localStorage 캐시도 업데이트
+            const updatedRecord = {
+                ...r,
+                itemName: payload.itemName,
+                itemTotal: payload.itemTotal,
+                inspectionDate: payload.inspectionDate,
+                relatedDoc: payload.relatedDoc,
+                inspectionPlace: payload.inspectionPlace,
+                buyerName: payload.buyerName,
+                inspectorName: payload.inspectorName,
+            };
+            if (result.photoUrls) updatedRecord.photoUrls = result.photoUrls;
+            saveSubmissionToLocal(updatedRecord);
+
+            closeEditModal();
+            showToast('✅ 수정이 완료되었습니다');
+            loadHistory();
+        } else {
+            showToast('❌ ' + (result.message || '수정 실패'), 'error');
+        }
+    } catch (err) {
+        showToast('❌ 네트워크 오류: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 저장';
+    }
 }
 
 function printRecord(r) {
