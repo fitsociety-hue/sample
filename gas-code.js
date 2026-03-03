@@ -18,6 +18,7 @@ function doGet(e) {
     if (action === 'register') return handleRegister(e);
     if (action === 'login') return handleLogin(e);
     if (action === 'list') return handleList(e);
+    if (action === 'get_ci') return handleGetCI(e);
 
     return json({ status: 'ok', version: 4 });
 }
@@ -29,6 +30,7 @@ function doPost(e) {
         if (data.action === 'register') return handleRegisterPost(data);
         if (data.action === 'update') return handleUpdate(data);
         if (data.action === 'delete') return handleDelete(data);
+        if (data.action === 'update_ci') return handleUpdateCI(data);
         return handleSubmit(data);
     } catch (err) {
         return json({ status: 'error', message: err.toString() });
@@ -91,10 +93,29 @@ function handleLogin(e) {
                 userId: rows[i][0],
                 name: rows[i][1],
                 teamName: rows[i][2],
+                ciImage: rows[i][5] || '', // 6번째 열 (F열)에 CI 저장
             });
         }
     }
     return json({ status: 'error', message: '이름 또는 비밀번호가 맞지 않습니다' });
+}
+
+function handleGetCI(e) {
+    const userId = e.parameter.userId;
+    if (!userId) return json({ status: 'error', message: 'userId가 필요합니다' });
+
+    const sheet = getUserSheet();
+    const rows = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === userId) {
+            return json({
+                status: 'ok',
+                ciImage: rows[i][5] || ''
+            });
+        }
+    }
+    return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
 }
 
 /* ══════════════════════════════════════════════
@@ -144,7 +165,11 @@ function writeToSpreadsheet(data) {
                     `${sheetName}_사진${i + 1}.jpg`
                 );
                 const file = folder.createFile(blob);
-                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                try {
+                    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                } catch (e) {
+                    // 권한 설정 실패 무시 (업로드는 성공)
+                }
                 const fileId = file.getId();
                 const directUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
                 photoUrls.push(directUrl);
@@ -259,7 +284,11 @@ function handleUpdate(data) {
                         `${sheetName}_수정사진${photoUrls.length + i + 1}.jpg`
                     );
                     const file = folder.createFile(blob);
-                    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                    try {
+                        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                    } catch (e) {
+                        // 권한 설정 실패 무시
+                    }
                     const fileId = file.getId();
                     photoUrls.push(`https://lh3.googleusercontent.com/d/${fileId}`);
                 } catch (_) { }
@@ -342,4 +371,23 @@ function hashPIN(pin) {
 function json(obj) {
     return ContentService.createTextOutput(JSON.stringify(obj))
         .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ══════════════════════════════════════════════
+   CI 이미지 업데이트
+   ══════════════════════════════════════════════ */
+function handleUpdateCI(data) {
+    const sheet = getUserSheet();
+    const rows = sheet.getDataRange().getValues();
+    const userId = data.userId;
+    const ciImage = data.ciImage || '';
+
+    // Find the user row and update 6th column (index 5)
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === userId) {
+            sheet.getRange(i + 1, 6).setValue(ciImage);
+            return json({ status: 'ok' });
+        }
+    }
+    return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
 }

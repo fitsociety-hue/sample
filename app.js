@@ -41,6 +41,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saved) {
             state.user = JSON.parse(saved);
             showMainApp();
+
+            // 백그라운드 CI 동기화
+            fetch(`${GAS_URL}?action=get_ci&userId=${encodeURIComponent(state.user.userId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        if (data.ciImage) localStorage.setItem('gi_ci_image', data.ciImage);
+                        else localStorage.removeItem('gi_ci_image');
+                        loadCIPreview();
+                    }
+                }).catch(console.error);
+
             return;
         }
     } catch (_) { }
@@ -96,6 +108,11 @@ async function login() {
         if (data.status === 'ok') {
             state.user = { userId: data.userId, name: data.name, teamName: data.teamName };
             localStorage.setItem('gi_user', JSON.stringify(state.user));
+
+            if (data.ciImage) localStorage.setItem('gi_ci_image', data.ciImage);
+            else localStorage.removeItem('gi_ci_image');
+            loadCIPreview();
+
             showMainApp();
         } else {
             $id('loginError').textContent = data.message || '로그인 실패';
@@ -579,6 +596,7 @@ function handleCIUpload(event) {
             const dataUrl = canvas.toDataURL('image/png', 0.9);
             localStorage.setItem('gi_ci_image', dataUrl);
             loadCIPreview();
+            syncCIToServer(dataUrl);
         };
         img.src = e.target.result;
     };
@@ -590,6 +608,23 @@ function deleteCIImage() {
     if (!confirm('CI 이미지를 삭제하시겠습니까?')) return;
     localStorage.removeItem('gi_ci_image');
     loadCIPreview();
+    syncCIToServer('');
+}
+
+async function syncCIToServer(ciImage) {
+    if (!state.user) return;
+    try {
+        await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'update_ci',
+                userId: state.user.userId,
+                ciImage: ciImage
+            })
+        });
+    } catch (err) {
+        console.error('CI 동기화 실패:', err);
+    }
 }
 
 function loadCIPreview() {
@@ -859,11 +894,12 @@ function printRecord(r) {
     /* 로컬 캐시에서 누락 데이터 보완 */
     const local = getLocalSubmission(r);
     if (local) {
+        const hasServerPhotos = (r.photoUrls && r.photoUrls.length > 0);
         r.relatedDoc = r.relatedDoc || local.relatedDoc || '';
         r.inspectionPlace = r.inspectionPlace || local.inspectionPlace || '';
         r.buyerName = r.buyerName || local.buyerName || '';
         r.inspectorName = r.inspectorName || local.inspectorName || '';
-        if ((!r.photos || !r.photos.length) && local.photos && local.photos.length) {
+        if (!hasServerPhotos && (!r.photos || !r.photos.length) && local.photos && local.photos.length) {
             r.photos = local.photos;
         }
     }
@@ -874,7 +910,7 @@ function printRecord(r) {
 
     /* 사진 HTML 생성 - photos (data URLs) 또는 photoUrls (Drive URLs) 사용 */
     let photosHTML = '';
-    const rawPhotoSrcs = (r.photos && r.photos.length > 0) ? r.photos : (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : [];
+    const rawPhotoSrcs = (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : (r.photos && r.photos.length > 0) ? r.photos : [];
     // Drive URL 변환 적용
     const photoSrcs = rawPhotoSrcs.map(src => getReliablePhotoUrl(src));
     if (photoSrcs.length > 0) {
