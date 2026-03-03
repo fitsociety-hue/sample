@@ -105,6 +105,7 @@
         <nav class="tab-nav">
             <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">📝 새 문서 작성</button>
             <button class="nav-tab" id="tabHistory" onclick="switchTab('history')">📁 내 기록</button>
+            <button class="nav-tab" id="tabSettings" onclick="switchTab('settings')">⚙️ 설정</button>
         </nav>
 
         <main class="container">
@@ -250,6 +251,35 @@
                 <div style="text-align:center;margin-top:24px;">
                     <a href="https://docs.google.com/spreadsheets/d/1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M/edit"
                         target="_blank" class="btn btn-primary" style="text-decoration:none;">📊 스프레드시트 보기</a>
+                </div>
+            </div>
+
+            <!-- ====== SETTINGS ====== -->
+            <div id="settingsPanel" style="display:none; padding-bottom:40px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><span class="card-icon">🏢</span> 복지관 CI 설정</h2>
+                        <p class="card-desc">인쇄물 하단 오른쪽에 표시될 복지관 CI 이미지를 등록하세요</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="ci-upload-area">
+                            <div id="ciPreview" class="ci-preview" style="display:none;">
+                                <img id="ciPreviewImg" src="" alt="CI 미리보기">
+                            </div>
+                            <div id="ciEmpty" class="ci-empty">
+                                <span class="ci-empty-icon">🖼️</span>
+                                <p>CI 이미지가 등록되지 않았습니다</p>
+                            </div>
+                            <div class="ci-actions">
+                                <input type="file" id="ciInput" accept="image/*" style="display:none;"
+                                    onchange="handleCIUpload(event)">
+                                <button class="btn btn-primary btn-small"
+                                    onclick="document.getElementById('ciInput').click()">📁 CI 이미지 업로드</button>
+                                <button class="btn btn-outline btn-small" id="ciDeleteBtn" style="display:none;"
+                                    onclick="deleteCIImage()">🗑️ 삭제</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

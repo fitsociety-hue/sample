@@ -463,9 +463,59 @@ function resetForm(full) {
 function switchTab(tab) {
     $id('tabForm').classList.toggle('active', tab === 'form');
     $id('tabHistory').classList.toggle('active', tab === 'history');
+    $id('tabSettings').classList.toggle('active', tab === 'settings');
     $id('mainApp').style.display = tab === 'form' ? '' : 'none';
     $id('historyPanel').style.display = tab === 'history' ? '' : 'none';
+    $id('settingsPanel').style.display = tab === 'settings' ? '' : 'none';
     if (tab === 'history') loadHistory();
+    if (tab === 'settings') loadCIPreview();
+}
+
+/* ════════════════════════════════════════════════
+   CI 로고 관리
+   ════════════════════════════════════════════════ */
+function handleCIUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            const canvas = document.createElement('canvas');
+            const maxW = 400;
+            const scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/png', 0.9);
+            localStorage.setItem('gi_ci_image', dataUrl);
+            loadCIPreview();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+function deleteCIImage() {
+    if (!confirm('CI 이미지를 삭제하시겠습니까?')) return;
+    localStorage.removeItem('gi_ci_image');
+    loadCIPreview();
+}
+
+function loadCIPreview() {
+    const ciData = localStorage.getItem('gi_ci_image');
+    if (ciData) {
+        $id('ciPreview').style.display = '';
+        $id('ciPreviewImg').src = ciData;
+        $id('ciEmpty').style.display = 'none';
+        $id('ciDeleteBtn').style.display = '';
+    } else {
+        $id('ciPreview').style.display = 'none';
+        $id('ciEmpty').style.display = '';
+        $id('ciDeleteBtn').style.display = 'none';
+    }
 }
 
 /* ════════════════════════════════════════════════
@@ -567,7 +617,11 @@ function printRecord(r) {
         photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
     }
 
-    const w = window.open('', '_blank', 'width=800,height=900');
+    const w = window.open('', '_blank', 'width=800,height=1000');
+    /* CI 로고 가져오기 */
+    const ciData = localStorage.getItem('gi_ci_image') || '';
+    const ciHTML = ciData ? `<img src="${ciData}" style="max-height:60px; object-fit:contain;">` : '';
+
     w.document.write(`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -575,32 +629,47 @@ function printRecord(r) {
 <title>물품검수조서 - ${r.itemName || ''}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  @page { size: A4; margin: 10mm 15mm; }
-  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; margin: 0; padding: 0; }
-  .page { max-width: 190mm; margin: 0 auto; padding: 12mm 10mm; }
-  .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 16px; }
+  @page { size: A4; margin: 20mm 15mm; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; }
+  .page {
+    width: 100%; min-height: calc(297mm - 40mm);
+    display: flex; flex-direction: column;
+    padding: 0;
+  }
+  .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 16px; padding-top: 8px; }
   table { width: 100%; border-collapse: collapse; }
   td { border: 1px solid #333; padding: 7px 10px; font-size: 13px; vertical-align: middle; }
   .label { background: #e8e8e8; font-weight: 700; text-align: center; width: 18%; white-space: nowrap; font-size: 12px; }
-  .photo-area { height: auto; min-height: 300px; max-height: 520px; padding: 6px !important; overflow: hidden; }
-  .photo-area img { max-height: 500px; }
+  .photo-area { padding: 6px !important; }
+  .photo-area-inner { flex: 1; display: flex; align-items: center; justify-content: center; }
   .sign-cell { text-align: right; padding-right: 16px !important; }
   .seal { margin-left: 12px; color: #555; }
-  .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+  .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 16px; }
+  .footer-left { font-size: 12px; color: #666; flex: 1; }
+  .footer-right { text-align: right; }
+  .footer-right img { max-height: 60px; }
+  .main-table-wrap { flex: 1; display: flex; flex-direction: column; }
+  .main-table-wrap table { flex: 1; }
+  .main-table-wrap tr.photo-row { height: 100%; }
+  .main-table-wrap tr.photo-row td { height: 100%; vertical-align: middle; }
   .print-btn-wrap { text-align: center; margin: 20px 0; }
   .print-btn { padding: 12px 36px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
   .print-btn:hover { background: #1D4ED8; }
   @media print {
     .print-btn-wrap { display: none !important; }
-    body { margin: 0; padding: 0; }
-    .page { padding: 0; max-width: 100%; }
+    .page { min-height: 100%; }
     .photo-area { page-break-inside: avoid; }
+  }
+  @media screen {
+    .page { max-width: 210mm; margin: 0 auto; padding: 20mm 15mm; min-height: 297mm; }
   }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="title">물 품 검 수 조 서</div>
+  <div class="main-table-wrap">
   <table>
     <tr>
       <td class="label">관련문서</td>
@@ -612,8 +681,8 @@ function printRecord(r) {
       <td class="label">구매금액</td>
       <td>${amount}</td>
     </tr>
-    <tr>
-      <td colspan="4" class="photo-area">${photosHTML}</td>
+    <tr class="photo-row">
+      <td colspan="4" class="photo-area">${photosHTML || '<div style="min-height:200px;"></div>'}</td>
     </tr>
     <tr>
       <td class="label">검수연월일</td>
@@ -628,7 +697,11 @@ function printRecord(r) {
       <td class="sign-cell">${r.inspectorName || ''}<span class="seal">(인)</span></td>
     </tr>
   </table>
-  <div class="footer">사단법인 한국지체장애인협회 강동어울림복지관</div>
+  </div>
+  <div class="footer">
+    <div class="footer-left">사단법인 한국지체장애인협회 강동어울림복지관</div>
+    <div class="footer-right">${ciHTML}</div>
+  </div>
 </div>
 <div class="print-btn-wrap">
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
