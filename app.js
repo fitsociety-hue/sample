@@ -677,36 +677,75 @@ async function saveCIImage() {
 
 async function syncCIToServer(ciImage) {
     if (!state.user) return;
-    try {
-        await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'update_ci',
-                userId: state.user.userId,
-                ciImage: ciImage
-            })
-        });
-    } catch (err) {
-        console.error('CI 동기화 실패:', err);
-    }
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'update_ci',
+            userId: state.user.userId,
+            ciImage: ciImage
+        })
+    }).then(r => r.json()).then(result => {
+        if (result.status === 'ok') {
+            showToast('✅ 로고가 성공적으로 반영되었습니다.');
+            if (result.ciUrl) {
+                // 백엔드에서 Drive URL로 변환해준 경우 업데이트
+                localStorage.setItem('gi_ci_image', result.ciUrl);
+                // 방금 업로드한 원본 Base64 데이터를 캐시에 저장
+                let m = result.ciUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+                if (!m) m = result.ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (m) {
+                    try {
+                        localStorage.setItem('gi_photo_' + m[1], base64Data);
+                    } catch (e) {
+                        console.warn('캐시 저장 실패 (용량 부족 등):', e);
+                    }
+                }
+                loadCIPreview();
+            }
+        } else {
+            showToast('❌ 반영 실패: ' + result.message, 'error');
+        }
+    }).catch(err => {
+        showToast('❌ 네트워크 오류: ' + err.message, 'error');
+    });
 }
 
 function loadCIPreview() {
-    const pendingData = localStorage.getItem('gi_ci_image_pending');
-    const ciData = pendingData || localStorage.getItem('gi_ci_image');
-    const saveBtn = $id('ciSaveBtn');
+    const preview = $id('ciPreviewLine');
+    const b1 = $id('ciUploadBtn');
+    const b2 = $id('ciSaveBtn');
+    const b3 = $id('ciDeleteBtn');
+
+    if (!preview) return;
+
+    let ciData = localStorage.getItem('gi_ci_image_pending');
+    let isPending = true;
+
+    if (!ciData) {
+        ciData = localStorage.getItem('gi_ci_image');
+        isPending = false;
+    }
 
     if (ciData) {
+        const urlObj = getReliablePhotoUrl(ciData);
+        preview.innerHTML = `
+            <div>
+              <p style="text-align:center; font-size:12px; margin-bottom:5px; color:#666;">
+                ${isPending ? '⚠️ 미저장 상태 (설정 저장을 누르세요)' : '현재 적용된 CI 로고'}
+              </p>
+              <img src="${urlObj}" onerror="loadFallbackImage(this)" style="max-height:80px; max-width:100%; object-fit:contain; border:1px solid #ddd; padding:4px; border-radius:4px; margin-bottom:10px;">
+            </div>
+        `;
         $id('ciPreview').style.display = '';
-        $id('ciPreviewImg').src = ciData;
+        $id('ciPreviewImg').src = urlObj; // Update this line to use urlObj
         $id('ciEmpty').style.display = 'none';
         $id('ciDeleteBtn').style.display = '';
-        if (saveBtn) saveBtn.style.display = pendingData ? '' : 'none';
+        if ($id('ciSaveBtn')) $id('ciSaveBtn').style.display = isPending ? '' : 'none';
     } else {
         $id('ciPreview').style.display = 'none';
         $id('ciEmpty').style.display = '';
         $id('ciDeleteBtn').style.display = 'none';
-        if (saveBtn) saveBtn.style.display = 'none';
+        if ($id('ciSaveBtn')) $id('ciSaveBtn').style.display = 'none';
     }
 }
 
@@ -719,7 +758,7 @@ async function loadHistory() {
     $id('historyList').innerHTML = '';
     const userId = state.user?.userId || '';
     try {
-        const res = await fetch(`${GAS_URL}?action=list${userId ? '&userId=' + encodeURIComponent(userId) : ''}`);
+        const res = await fetch(`${GAS_URL}?action = list${userId ? '&userId=' + encodeURIComponent(userId) : ''} `);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
@@ -756,29 +795,30 @@ function renderHistory(records) {
         const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
         // Drive URL 변환 적용
         const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
-        const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
+        const thumbsHTML = reliableSrcs.length ? `< div class="history-photos" > ${reliableSrcs.slice(0, 4).map(src => {
             return `<img class="history-thumb" src="${src}" onerror="loadFallbackImage(this)">`;
-        }).join('')}${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div>` : '';
+        }).join('')
+            }${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div > ` : '';
         return `
-    <div class="history-card">
-      <div class="history-header">
-        <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
-        <span class="history-date">${r.submittedAt || ''}</span>
-      </div>
+        < div class="history-card" >
+            <div class="history-header">
+                <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
+                <span class="history-date">${r.submittedAt || ''}</span>
+            </div>
       ${r.teamName ? `<div class="history-team">🏢 ${r.teamName}</div>` : ''}
-      <div class="history-details">
+    <div class="history-details">
         <span class="history-badge">👤 ${r.name || ''}</span>
         ${r.itemTotal ? `<span class="history-badge">💰 ${Number(r.itemTotal || 0).toLocaleString('ko-KR')}원</span>` : ''}
         ${r.inspectionDate ? `<span class="history-badge">📅 ${r.inspectionDate}</span>` : ''}
-      </div>
+    </div>
       ${thumbsHTML}
-      <div class="history-actions">
+    <div class="history-actions">
         <button class="history-link" onclick="openEditRecord(${i})">✏️ 수정</button>
         ${r.sheetUrl ? `<a href="${r.sheetUrl}" target="_blank" class="history-link">📄 열기</a>` : ''}
         <button class="history-link history-print-btn" onclick="printRecord(window._historyRecords[${i}])">🖨️ 인쇄/PDF</button>
         <button class="history-link btn-delete" onclick="deleteRecord(${i})">🗑️ 삭제</button>
-      </div>
-    </div>`;
+    </div>
+    </div > `;
     }).join('');
 }
 
@@ -830,17 +870,17 @@ function renderEditPhotos() {
         const fallback = getPhotoFallbackUrl(p.src);
         const isDeleted = p.markedDelete;
         return `
-        <div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}">
+        < div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}" >
             <img src="${p.src}" onerror="loadFallbackImage(this)">
-            ${isDeleted
+                ${isDeleted
                 ? `<div class="edit-photo-delete-overlay">
                      <span>삭제 예정</span>
                      <button class="edit-photo-undo" onclick="undoRemoveEditPhoto(${i})">↩ 복원</button>
                    </div>`
                 : `<button class="edit-photo-remove" onclick="removeEditPhoto(${i})">&times;</button>`
             }
-            ${!isDeleted && p.type === 'new' ? '<span class="edit-photo-new-badge">NEW</span>' : ''}
-        </div>`;
+                ${!isDeleted && p.type === 'new' ? '<span class="edit-photo-new-badge">NEW</span>' : ''}
+            </div>`;
     }).join('');
 }
 
@@ -1016,7 +1056,19 @@ function printRecord(r) {
     const w = window.open('', '_blank', 'width=800,height=1000');
     /* CI 로고 가져오기 */
     const ciData = localStorage.getItem('gi_ci_image') || '';
-    const ciHTML = ciData ? `<img src="${ciData}" style="max-height:60px; object-fit:contain;">` : '';
+    let ciHTML = '';
+    if (ciData) {
+        const reliableUrl = getReliablePhotoUrl(ciData);
+        let finalSrc = reliableUrl;
+        let m = reliableUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = reliableUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = reliableUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (m) {
+            const cached = localStorage.getItem('gi_photo_' + m[1]);
+            if (cached) finalSrc = cached;
+        }
+        ciHTML = `<img src="${finalSrc}" onerror="loadFallback(this)" style="max-height:60px; object-fit:contain;">`;
+    }
 
     w.document.write(`<!DOCTYPE html>
 <html lang="ko">

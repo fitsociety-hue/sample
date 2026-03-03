@@ -407,8 +407,29 @@ function handleUpdateCI(data) {
     // Find the user row and update 6th column (index 5)
     for (let i = 1; i < rows.length; i++) {
         if (rows[i][0] === userId) {
-            sheet.getRange(i + 1, 6).setValue(ciImage);
-            return json({ status: 'ok' });
+            let finalValue = ciImage;
+
+            // 만약 새로 업로드된 Base64 이미지라면 드라이브에 저장 후 URL 반환
+            if (ciImage && ciImage.startsWith('data:image/')) {
+                try {
+                    const folder = getOrCreateFolder(DRIVE_FOLDER);
+                    const blob = Utilities.newBlob(
+                        Utilities.base64Decode(ciImage.split(',')[1]),
+                        'image/png',
+                        `CI_Logo_${userId}.png`
+                    );
+                    const file = folder.createFile(blob);
+                    try {
+                        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                    } catch (e) { }
+                    finalValue = `https://lh3.googleusercontent.com/d/${file.getId()}`;
+                } catch (e) {
+                    return json({ status: 'error', message: '드라이브 저장 실패: ' + e.toString() });
+                }
+            }
+
+            sheet.getRange(i + 1, 6).setValue(finalValue);
+            return json({ status: 'ok', ciUrl: finalValue });
         }
     }
     return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
