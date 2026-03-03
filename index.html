@@ -181,8 +181,10 @@
                             <p class="card-desc">1~4장의 검수 사진을 등록하세요</p>
                         </div>
                         <div class="card-body">
-                            <div class="upload-area" onclick="document.getElementById('photoInput').click()">
-                                <input type="file" id="photoInput" accept="image/*" multiple capture="environment"
+                            <div class="upload-area" onclick="showPhotoSourcePicker('main')">
+                                <input type="file" id="photoInput" accept="image/*" multiple style="display:none"
+                                    onchange="handlePhotoUpload(this)">
+                                <input type="file" id="photoCameraInput" accept="image/*" capture="environment"
                                     style="display:none" onchange="handlePhotoUpload(this)">
                                 <div class="upload-icon">
                                     <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -202,7 +204,7 @@
                                 </div>
                                 <div class="photo-grid" id="photoGrid"></div>
                                 <button class="btn btn-outline btn-small" style="margin-top:12px;"
-                                    onclick="document.getElementById('photoInput').click()">+ 사진 추가</button>
+                                    onclick="showPhotoSourcePicker('main')">+ 사진 추가</button>
                             </div>
                         </div>
                     </div>
@@ -344,14 +346,56 @@
                             <div class="edit-photo-grid" id="editPhotoGrid"></div>
                             <input type="file" id="editPhotoInput" accept="image/*" multiple style="display:none;"
                                 onchange="handleEditPhotoUpload(event)">
+                            <input type="file" id="editPhotoCameraInput" accept="image/*" capture="environment"
+                                style="display:none;" onchange="handleEditPhotoUpload(event)">
                             <button class="btn btn-outline btn-small" style="margin-top:10px;"
-                                onclick="document.getElementById('editPhotoInput').click()">+ 사진 추가</button>
+                                onclick="showPhotoSourcePicker('edit')">+ 사진 추가</button>
                         </div>
                     </div>
                     <div class="edit-modal-footer">
                         <button class="btn btn-outline" onclick="closeEditModal()">취소</button>
                         <button class="btn btn-primary" id="editSaveBtn" onclick="saveEditRecord()">💾 저장</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Photo Source Picker Bottom Sheet -->
+            <div class="picker-overlay" id="photoSourcePicker" style="display:none;" onclick="closePhotoSourcePicker()">
+                <div class="picker-sheet" onclick="event.stopPropagation()">
+                    <div class="picker-header">
+                        <span class="picker-title">📷 사진 추가 방법 선택</span>
+                        <button class="picker-close" onclick="closePhotoSourcePicker()">&times;</button>
+                    </div>
+                    <div class="picker-options">
+                        <button class="picker-option" onclick="pickPhotoSource('camera')">
+                            <span class="picker-option-icon">📸</span>
+                            <div class="picker-option-text">
+                                <strong>카메라로 촬영</strong>
+                                <span>직접 사진을 찍어 등록합니다</span>
+                            </div>
+                        </button>
+                        <button class="picker-option" onclick="pickPhotoSource('album')">
+                            <span class="picker-option-icon">🖼️</span>
+                            <div class="picker-option-text">
+                                <strong>앨범에서 선택</strong>
+                                <span>저장된 사진에서 선택합니다</span>
+                            </div>
+                        </button>
+                    </div>
+                    <button class="picker-cancel" onclick="closePhotoSourcePicker()">취소</button>
+                </div>
+            </div>
+
+            <!-- Delete Confirm Modal -->
+            <div class="modal-overlay" id="deleteConfirmModal" style="display:none;">
+                <div class="modal-content">
+                    <div class="modal-icon">⚠️</div>
+                    <h3>기록 삭제</h3>
+                    <p>이 물품검수조서를 삭제하시겠습니까?<br><strong id="deleteItemName"></strong><br><span
+                            style="font-size:.78rem;color:#EF4444;">삭제된 기록은 복구할 수 없습니다.</span></p>
+                    <button class="btn btn-danger" id="deleteConfirmBtn" style="width:100%;margin-bottom:8px;"
+                        onclick="confirmDeleteRecord()">🗑️ 삭제하기</button>
+                    <button class="btn btn-outline" style="width:100%;" onclick="cancelDeleteRecord()">취소</button>
                 </div>
             </div>
 

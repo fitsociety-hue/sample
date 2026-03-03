@@ -2175,3 +2175,241 @@ body {
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     }
 }
+
+/* ════════════════════════════════════════════════
+   PHOTO SOURCE PICKER (바텀시트)
+   ════════════════════════════════════════════════ */
+.picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn .2s ease;
+}
+
+.picker-sheet {
+    background: var(--bg);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 0;
+    animation: slideUp .3s ease;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.picker-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.picker-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background .2s;
+}
+
+.picker-close:hover {
+    background: var(--bg-dim);
+}
+
+.picker-options {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.picker-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    background: var(--bg-dim);
+    border: 2px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all .2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.picker-option:hover,
+.picker-option:active {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.06);
+    transform: scale(1.01);
+}
+
+.picker-option-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.picker-option-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.picker-option-text strong {
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.picker-option-text span {
+    font-size: 0.78rem;
+    color: var(--text-light);
+}
+
+.picker-cancel {
+    display: block;
+    width: calc(100% - 40px);
+    margin: 0 20px 20px;
+    padding: 14px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.picker-cancel:hover {
+    background: var(--bg-dim);
+}
+
+/* ════════════════════════════════════════════════
+   HISTORY DELETE BUTTON
+   ════════════════════════════════════════════════ */
+.history-link.btn-delete {
+    color: #EF4444;
+    border-color: #FCA5A5;
+    background: rgba(239, 68, 68, 0.04);
+}
+
+.history-link.btn-delete:hover {
+    background: #EF4444;
+    color: #fff;
+    border-color: #EF4444;
+}
+
+/* ════════════════════════════════════════════════
+   DELETE CONFIRM MODAL
+   ════════════════════════════════════════════════ */
+.btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #fff;
+    font-weight: 700;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: .95rem;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #DC2626, #B91C1C);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ════════════════════════════════════════════════
+   EDIT PHOTO DELETE MARKING / UNDO
+   ════════════════════════════════════════════════ */
+.edit-photo-item.marked-delete {
+    position: relative;
+    opacity: 0.5;
+    border: 2px dashed #EF4444;
+}
+
+.edit-photo-item.marked-delete img {
+    filter: grayscale(60%);
+}
+
+.edit-photo-delete-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(239, 68, 68, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 10px;
+}
+
+.edit-photo-delete-overlay span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #DC2626;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.edit-photo-undo {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    background: #6366F1;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.edit-photo-undo:hover {
+    background: #4F46E5;
+    transform: scale(1.05);
+}
+
+.edit-photo-new-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+    background: #10B981;
+    padding: 2px 6px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+}

@@ -28,6 +28,7 @@ function doPost(e) {
         const data = JSON.parse(e.postData.contents);
         if (data.action === 'register') return handleRegisterPost(data);
         if (data.action === 'update') return handleUpdate(data);
+        if (data.action === 'delete') return handleDelete(data);
         return handleSubmit(data);
     } catch (err) {
         return json({ status: 'error', message: err.toString() });
@@ -145,7 +146,7 @@ function writeToSpreadsheet(data) {
                 const file = folder.createFile(blob);
                 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
                 const fileId = file.getId();
-                const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                const directUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
                 photoUrls.push(directUrl);
                 sheet.getRange(rows.length + i + 2, 1).setValue(`사진${i + 1}: ${file.getUrl()}`);
             } catch (_) { }
@@ -260,7 +261,7 @@ function handleUpdate(data) {
                     const file = folder.createFile(blob);
                     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
                     const fileId = file.getId();
-                    photoUrls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
+                    photoUrls.push(`https://lh3.googleusercontent.com/d/${fileId}`);
                 } catch (_) { }
             });
         }
@@ -271,6 +272,31 @@ function handleUpdate(data) {
         return json({ status: 'ok', photoUrls });
     } catch (err) {
         return json({ status: 'error', message: '수정 실패: ' + err.toString() });
+    }
+}
+
+/* ══════════════════════════════════════════════
+   기록 삭제
+   ══════════════════════════════════════════════ */
+function handleDelete(data) {
+    try {
+        const rowId = data.rowId;
+        if (!rowId) return json({ status: 'error', message: 'rowId가 없습니다' });
+
+        const log = getLogSheet();
+        const rows = log.getDataRange().getValues();
+        let targetRow = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === rowId) { targetRow = i + 1; break; }
+        }
+        if (targetRow < 0) return json({ status: 'error', message: '해당 기록을 찾을 수 없습니다' });
+
+        log.deleteRow(targetRow);
+        SpreadsheetApp.flush();
+
+        return json({ status: 'ok', message: '삭제 완료' });
+    } catch (err) {
+        return json({ status: 'error', message: '삭제 실패: ' + err.toString() });
     }
 }
 

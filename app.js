@@ -11,9 +11,11 @@ const state = {
     currentStep: 1,
     photos: [],
     editRecord: null,
-    editPhotos: [],       // { src, type:'existing'|'new', originalIndex? }
+    editPhotos: [],       // { src, type:'existing'|'new', originalIndex?, markedDelete? }
     editNewPhotos: [],    // data URLs of newly added photos
     editDeleteIndexes: [], // indexes of existing photos to delete
+    photoPickerTarget: 'main', // 'main' or 'edit'
+    deleteTargetIndex: -1,     // index in _historyRecords for pending delete
 };
 
 /* ── 헬퍼 ── */
@@ -257,6 +259,71 @@ function formatKoreanDate(dateStr) {
         return `${dotParts[0]}년 ${dotParts[1]}월 ${dotParts[2]}일`;
     }
     return dateStr;
+}
+
+/* ════════════════════════════════════════════════
+   PHOTO SOURCE PICKER (카메라/앨범 선택)
+   ════════════════════════════════════════════════ */
+function showPhotoSourcePicker(target) {
+    state.photoPickerTarget = target;
+    $id('photoSourcePicker').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePhotoSourcePicker() {
+    $id('photoSourcePicker').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function pickPhotoSource(source) {
+    closePhotoSourcePicker();
+    const isEdit = state.photoPickerTarget === 'edit';
+    if (source === 'camera') {
+        // capture 속성이 있는 input 사용 → 카메라 직접 열기
+        const cameraInput = $id(isEdit ? 'editPhotoCameraInput' : 'photoCameraInput');
+        if (cameraInput) cameraInput.click();
+    } else {
+        // capture 없는 input 사용 → 앨범/파일 선택
+        const albumInput = $id(isEdit ? 'editPhotoInput' : 'photoInput');
+        if (albumInput) albumInput.click();
+    }
+}
+
+/* ════════════════════════════════════════════════
+   DRIVE URL 변환 (크로스 디바이스 사진 표시 수정)
+   ════════════════════════════════════════════════ */
+function getReliablePhotoUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    // data URL은 그대로
+    if (url.startsWith('data:')) return url;
+
+    // Drive file ID 추출
+    let fileId = '';
+    // https://drive.google.com/uc?export=view&id=XXX
+    let m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m) fileId = m[1];
+    // https://drive.google.com/file/d/XXX/view
+    if (!fileId) { m = url.match(/\/d\/([a-zA-Z0-9_-]+)/); if (m) fileId = m[1]; }
+    // https://drive.google.com/thumbnail?id=XXX
+    if (!fileId) { m = url.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/); if (m) fileId = m[1]; }
+    // https://lh3.googleusercontent.com/d/XXX
+    if (!fileId) { m = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/); if (m) fileId = m[1]; }
+
+    if (fileId) {
+        // 가장 안정적인 형식 사용
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+    return url;
+}
+
+function getPhotoFallbackUrl(url) {
+    if (!url) return '';
+    let fileId = '';
+    let m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) fileId = m[1];
+    if (!fileId) { m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/); if (m) fileId = m[1]; }
+    if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+    return '';
 }
 
 /* ════════════════════════════════════════════════
@@ -583,7 +650,12 @@ function renderHistory(records) {
 
     $id('historyList').innerHTML = window._historyRecords.map((r, i) => {
         const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
-        const thumbsHTML = photoSrcs.length ? `<div class="history-photos">${photoSrcs.slice(0, 4).map(src => `<img class="history-thumb" src="${src}" onerror="this.style.display='none'">`).join('')}${photoSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${photoSrcs.length - 4}</span>` : ''}</div>` : '';
+        // Drive URL 변환 적용
+        const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
+        const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
+            const fallback = getPhotoFallbackUrl(src);
+            return `<img class="history-thumb" src="${src}" onerror="if(this.dataset.retried)this.style.display='none';else{this.dataset.retried='1';this.src='${fallback}'}">`;
+        }).join('')}${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div>` : '';
         return `
     <div class="history-card">
       <div class="history-header">
@@ -601,6 +673,7 @@ function renderHistory(records) {
         <button class="history-link" onclick="openEditRecord(${i})">✏️ 수정</button>
         ${r.sheetUrl ? `<a href="${r.sheetUrl}" target="_blank" class="history-link">📄 열기</a>` : ''}
         <button class="history-link history-print-btn" onclick="printRecord(window._historyRecords[${i}])">🖨️ 인쇄/PDF</button>
+        <button class="history-link btn-delete" onclick="deleteRecord(${i})">🗑️ 삭제</button>
       </div>
     </div>`;
     }).join('');
@@ -616,9 +689,9 @@ function openEditRecord(index) {
     state.editNewPhotos = [];
     state.editDeleteIndexes = [];
 
-    // 기존 사진 목록 구성
+    // 기존 사진 목록 구성 (URL 변환 적용)
     const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
-    state.editPhotos = photoSrcs.map((src, i) => ({ src, type: 'existing', originalIndex: i }));
+    state.editPhotos = photoSrcs.map((src, i) => ({ src: getReliablePhotoUrl(src), type: 'existing', originalIndex: i, markedDelete: false }));
 
     // 폼 필드 채우기
     setVal('editRelatedDoc', r.relatedDoc || '');
@@ -649,18 +722,30 @@ function closeEditModal() {
 function renderEditPhotos() {
     const grid = $id('editPhotoGrid');
     if (!grid) return;
-    grid.innerHTML = state.editPhotos.map((p, i) => `
-        <div class="edit-photo-item">
-            <img src="${p.src}" onerror="this.parentElement.innerHTML='<div style=\\"display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:11px;\\">사진 로드 실패</div>'">
-            <button class="edit-photo-remove" onclick="removeEditPhoto(${i})">&times;</button>
-        </div>
-    `).join('');
+    const activeCount = state.editPhotos.filter(p => !p.markedDelete).length;
+    grid.innerHTML = state.editPhotos.map((p, i) => {
+        const fallback = getPhotoFallbackUrl(p.src);
+        const isDeleted = p.markedDelete;
+        return `
+        <div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}">
+            <img src="${p.src}" onerror="if(this.dataset.retried)this.parentElement.innerHTML='<div style=\"display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:11px;\">사진 로드 실패</div>';else{this.dataset.retried='1';this.src='${fallback}';}">
+            ${isDeleted
+                ? `<div class="edit-photo-delete-overlay">
+                     <span>삭제 예정</span>
+                     <button class="edit-photo-undo" onclick="undoRemoveEditPhoto(${i})">↩ 복원</button>
+                   </div>`
+                : `<button class="edit-photo-remove" onclick="removeEditPhoto(${i})">&times;</button>`
+            }
+            ${!isDeleted && p.type === 'new' ? '<span class="edit-photo-new-badge">NEW</span>' : ''}
+        </div>`;
+    }).join('');
 }
 
 async function handleEditPhotoUpload(event) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    if (state.editPhotos.length + files.length > 4) {
+    const activeCount = state.editPhotos.filter(p => !p.markedDelete).length;
+    if (activeCount + files.length > 4) {
         showToast('사진은 최대 4장까지 가능합니다', 'error');
         event.target.value = '';
         return;
@@ -672,7 +757,7 @@ async function handleEditPhotoUpload(event) {
             reader.readAsDataURL(file);
         });
         const compressed = await compressImage(dataUrl);
-        state.editPhotos.push({ src: compressed, type: 'new' });
+        state.editPhotos.push({ src: compressed, type: 'new', markedDelete: false });
         state.editNewPhotos.push(compressed);
     }
     renderEditPhotos();
@@ -682,12 +767,25 @@ async function handleEditPhotoUpload(event) {
 function removeEditPhoto(index) {
     const photo = state.editPhotos[index];
     if (photo.type === 'existing') {
+        // 마크만 해 두고 실제 삭제는 저장 시
+        photo.markedDelete = true;
         state.editDeleteIndexes.push(photo.originalIndex);
     } else {
+        // 새 사진은 바로 제거
         const newIdx = state.editNewPhotos.indexOf(photo.src);
         if (newIdx >= 0) state.editNewPhotos.splice(newIdx, 1);
+        state.editPhotos.splice(index, 1);
     }
-    state.editPhotos.splice(index, 1);
+    renderEditPhotos();
+}
+
+function undoRemoveEditPhoto(index) {
+    const photo = state.editPhotos[index];
+    if (!photo) return;
+    photo.markedDelete = false;
+    // editDeleteIndexes에서 해당 인덱스 제거
+    const delIdx = state.editDeleteIndexes.indexOf(photo.originalIndex);
+    if (delIdx >= 0) state.editDeleteIndexes.splice(delIdx, 1);
     renderEditPhotos();
 }
 
@@ -702,6 +800,11 @@ async function saveEditRecord() {
     btn.disabled = true;
     btn.textContent = '저장 중...';
 
+    // markedDelete된 기존 사진 인덱스 수집
+    const deleteIndexes = state.editPhotos
+        .filter(p => p.type === 'existing' && p.markedDelete)
+        .map(p => p.originalIndex);
+
     const payload = {
         action: 'update',
         rowId: r.rowId,
@@ -713,7 +816,7 @@ async function saveEditRecord() {
         buyerName: getVal('editBuyerName'),
         inspectorName: getVal('editInspectorName'),
         newPhotos: state.editNewPhotos,
-        deletePhotoIndexes: state.editDeleteIndexes,
+        deletePhotoIndexes: deleteIndexes,
     };
 
     try {
@@ -771,7 +874,9 @@ function printRecord(r) {
 
     /* 사진 HTML 생성 - photos (data URLs) 또는 photoUrls (Drive URLs) 사용 */
     let photosHTML = '';
-    const photoSrcs = (r.photos && r.photos.length > 0) ? r.photos : (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : [];
+    const rawPhotoSrcs = (r.photos && r.photos.length > 0) ? r.photos : (r.photoUrls && r.photoUrls.length > 0) ? r.photoUrls : [];
+    // Drive URL 변환 적용
+    const photoSrcs = rawPhotoSrcs.map(src => getReliablePhotoUrl(src));
     if (photoSrcs.length > 0) {
         const n = photoSrcs.length;
         let gridStyle = '';
@@ -885,4 +990,55 @@ function printRecord(r) {
 </body>
 </html>`);
     w.document.close();
+}
+
+/* ════════════════════════════════════════════════
+   기록 삭제
+   ════════════════════════════════════════════════ */
+function deleteRecord(index) {
+    const r = window._historyRecords[index];
+    if (!r) return;
+    state.deleteTargetIndex = index;
+    $id('deleteItemName').textContent = r.itemName || '(품목 없음)';
+    $id('deleteConfirmModal').style.display = 'flex';
+}
+
+function cancelDeleteRecord() {
+    state.deleteTargetIndex = -1;
+    $id('deleteConfirmModal').style.display = 'none';
+}
+
+async function confirmDeleteRecord() {
+    const index = state.deleteTargetIndex;
+    const r = window._historyRecords[index];
+    if (!r || !r.rowId) {
+        showToast('삭제할 수 없는 기록입니다', 'error');
+        cancelDeleteRecord();
+        return;
+    }
+
+    const btn = $id('deleteConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = '삭제 중...';
+
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', rowId: r.rowId }),
+        });
+        const result = await res.json();
+        if (result.status === 'ok') {
+            cancelDeleteRecord();
+            showToast('✅ 기록이 삭제되었습니다');
+            loadHistory();
+        } else {
+            showToast('❌ ' + (result.message || '삭제 실패'), 'error');
+        }
+    } catch (err) {
+        showToast('❌ 네트워크 오류: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🗑️ 삭제하기';
+    }
 }
