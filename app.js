@@ -996,17 +996,19 @@ function printRecord(r) {
         let photoItems = '';
         if (n === 1) {
             gridStyle = 'display:flex; justify-content:center; align-items:center; width:100%; height:100%; max-height:650px;';
-            photoItems = `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:640px; object-fit:contain;"></div>`;
+            photoItems = `<div style="width:75%; display:flex; justify-content:center; align-items:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; height:380px; object-fit:cover; border-radius:4px;"></div>`;
         } else if (n === 2) {
-            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; max-height:660px;';
-            photoItems = photoSrcs.map(p => `<div style="width:100%; max-height:325px; display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:320px; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-height:660px; justify-content:center;';
+            photoItems = photoSrcs.map(p => `<div style="width:80%; display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:280px; object-fit:cover; border-radius:4px;"></div>`).join('');
         } else if (n === 3) {
-            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:4px; width:100%; max-height:660px;';
-            photoItems = `<div style="grid-column:span 2; display:flex; align-items:center; justify-content:center; max-height:380px;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:370px; object-fit:contain;"></div>`;
-            photoItems += photoSrcs.slice(1).map(p => `<div style="display:flex; align-items:center; justify-content:center; max-height:270px;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:260px; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-height:660px;';
+            photoItems = `<div style="width:70%; display:flex; align-items:center; justify-content:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; height:300px; object-fit:cover; border-radius:4px;"></div>`;
+            photoItems += `<div style="width:85%; display:flex; gap:8px; justify-content:center;">`;
+            photoItems += photoSrcs.slice(1).map(p => `<div style="flex:1; display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:220px; object-fit:cover; border-radius:4px;"></div>`).join('');
+            photoItems += `</div>`;
         } else {
-            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:4px; width:100%; max-height:660px;';
-            photoItems = photoSrcs.map(p => `<div style="display:flex; align-items:center; justify-content:center; max-height:325px;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:315px; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px; width:90%; margin:0 auto; max-height:660px;';
+            photoItems = photoSrcs.map(p => `<div style="display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:260px; object-fit:cover; border-radius:4px;"></div>`).join('');
         }
         photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
     }
