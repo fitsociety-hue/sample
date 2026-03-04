@@ -1039,7 +1039,7 @@ async function saveEditRecord() {
     }
 }
 
-function printRecord(r) {
+async function printRecord(r) {
     /* 서버 데이터를 직접 사용 */
 
     const label = (r.teamName ? `${r.teamName} / ` : '') + (r.name || '');
@@ -1087,20 +1087,49 @@ function printRecord(r) {
     }
 
     const w = window.open('', '_blank', 'width=800,height=1000');
-    /* CI 로고 가져오기 */
-    const ciData = localStorage.getItem('gi_ci_image') || '';
+
+    /* CI 로고 가져오기 - localStorage 없으면 서버에서 조회 */
+    let ciData = localStorage.getItem('gi_ci_image') || '';
+
+    // localStorage에 CI가 없으면 서버에서 가져오기
+    if (!ciData) {
+        try {
+            const ciRes = await fetch(`${GAS_URL}?action=get_global_ci`);
+            const ciResult = await ciRes.json();
+            if (ciResult.status === 'ok' && ciResult.ciImage) {
+                ciData = ciResult.ciImage;
+                localStorage.setItem('gi_ci_image', ciData);
+            }
+        } catch (e) { console.error('CI 로드 실패:', e); }
+    }
+
     let ciHTML = '';
     if (ciData) {
-        const reliableUrl = getReliablePhotoUrl(ciData);
-        let finalSrc = reliableUrl;
-        let m = reliableUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = reliableUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = reliableUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if (m) {
-            const cached = localStorage.getItem('gi_photo_' + m[1]);
-            if (cached) finalSrc = cached;
+        let finalSrc = ciData;
+        // Drive URL인 경우 Base64 캐시 확인 또는 서버에서 가져오기
+        let fileId = null;
+        let m = ciData.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = ciData.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = ciData.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (m) fileId = m[1];
+
+        if (fileId) {
+            const cached = localStorage.getItem('gi_photo_' + fileId);
+            if (cached) {
+                finalSrc = cached;
+            } else {
+                // 서버에서 Base64 변환하여 가져오기
+                try {
+                    const imgRes = await fetch(`${GAS_URL}?action=get_image&fileId=${fileId}`);
+                    const imgResult = await imgRes.json();
+                    if (imgResult.status === 'ok' && imgResult.dataUrl) {
+                        finalSrc = imgResult.dataUrl;
+                        try { localStorage.setItem('gi_photo_' + fileId, finalSrc); } catch (e) { }
+                    }
+                } catch (e) { console.error('CI 이미지 변환 실패:', e); }
+            }
         }
-        ciHTML = `<img src="${finalSrc}" onerror="loadFallback(this)" style="max-height:60px; object-fit:contain;">`;
+        ciHTML = `<img src="${finalSrc}" style="max-height:60px; object-fit:contain;">`;
     }
 
     w.document.write(`<!DOCTYPE html>

@@ -397,6 +397,34 @@ function hashPIN(pin) {
     return bytes.map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
 }
 
+/* ══════════════════════════════════════════════
+   글로벌 CI 조회
+   ══════════════════════════════════════════════ */
+function handleGetGlobalCI(e) {
+    const ciImage = getSharedCI();
+    return json({ status: 'ok', ciImage: ciImage });
+}
+
+/* ══════════════════════════════════════════════
+   Drive 이미지 → Base64 프록시
+   ══════════════════════════════════════════════ */
+function handleGetImage(e) {
+    const fileId = (e.parameter.fileId || '').trim();
+    if (!fileId) return json({ status: 'error', message: 'fileId 필수' });
+
+    try {
+        const file = DriveApp.getFileById(fileId);
+        const blob = file.getBlob();
+        const mimeType = blob.getContentType() || 'image/png';
+        const bytes = blob.getBytes();
+        const base64 = Utilities.base64Encode(bytes);
+        const dataUrl = 'data:' + mimeType + ';base64,' + base64;
+        return json({ status: 'ok', dataUrl: dataUrl });
+    } catch (err) {
+        return json({ status: 'error', message: '이미지 로드 실패: ' + err.toString() });
+    }
+}
+
 function json(obj) {
     return ContentService.createTextOutput(JSON.stringify(obj))
         .setMimeType(ContentService.MimeType.JSON);
