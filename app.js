@@ -995,18 +995,18 @@ function printRecord(r) {
         let gridStyle = '';
         let photoItems = '';
         if (n === 1) {
-            gridStyle = 'display:flex; justify-content:center; align-items:center; width:100%; height:100%;';
-            photoItems = `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; height:100%; object-fit:contain;"></div>`;
+            gridStyle = 'display:flex; justify-content:center; align-items:center; width:100%; height:100%; max-height:650px;';
+            photoItems = `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:640px; object-fit:contain;"></div>`;
         } else if (n === 2) {
-            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:2px; width:100%; height:100%;';
-            photoItems = photoSrcs.map(p => `<div style="width:100%; flex:1; display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; max-height:660px;';
+            photoItems = photoSrcs.map(p => `<div style="width:100%; max-height:325px; display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:320px; object-fit:contain;"></div>`).join('');
         } else if (n === 3) {
-            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2px; width:100%; height:100%;';
-            photoItems = `<div style="grid-column:span 2; display:flex; align-items:center; justify-content:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; height:100%; object-fit:contain;"></div>`;
-            photoItems += photoSrcs.slice(1).map(p => `<div style="display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:4px; width:100%; max-height:660px;';
+            photoItems = `<div style="grid-column:span 2; display:flex; align-items:center; justify-content:center; max-height:380px;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:370px; object-fit:contain;"></div>`;
+            photoItems += photoSrcs.slice(1).map(p => `<div style="display:flex; align-items:center; justify-content:center; max-height:270px;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:260px; object-fit:contain;"></div>`).join('');
         } else {
-            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2px; width:100%; height:100%;';
-            photoItems = photoSrcs.map(p => `<div style="display:flex; align-items:center; justify-content:center;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; object-fit:contain;"></div>`).join('');
+            gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:4px; width:100%; max-height:660px;';
+            photoItems = photoSrcs.map(p => `<div style="display:flex; align-items:center; justify-content:center; max-height:325px;"><img src="${p}" onerror="loadFallback(this)" style="max-width:100%; max-height:315px; object-fit:contain;"></div>`).join('');
         }
         photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
     }
@@ -1039,32 +1039,32 @@ function printRecord(r) {
   html, body { height: 100%; margin: 0; padding: 0; }
   body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #111; }
   .page {
-    width: 100%; min-height: calc(297mm - 40mm);
+    width: 100%; height: calc(297mm - 40mm); max-height: calc(297mm - 40mm);
     display: flex; flex-direction: column;
-    padding: 0;
+    padding: 0; overflow: hidden;
   }
   .title { text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.2em; margin-bottom: 16px; padding-top: 8px; }
   table { width: 100%; border-collapse: collapse; }
   td { border: 1px solid #333; padding: 7px 10px; font-size: 13px; vertical-align: middle; }
   .label { background: #e8e8e8; font-weight: 700; text-align: center; width: 18%; white-space: nowrap; font-size: 12px; }
-  .photo-area { padding: 6px !important; }
-  .photo-area-inner { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .photo-area { padding: 6px !important; overflow: hidden; }
+  .photo-area-inner { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .sign-cell { text-align: right; padding-right: 16px !important; }
   .seal { margin-left: 12px; color: #555; }
   .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 16px; }
   .footer-left { font-size: 12px; color: #666; flex: 1; }
   .footer-right { text-align: right; }
   .footer-right img { max-height: 60px; }
-  .main-table-wrap { flex: 1; display: flex; flex-direction: column; }
+  .main-table-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .main-table-wrap table { flex: 1; }
-  .main-table-wrap tr.photo-row { height: 100%; }
-  .main-table-wrap tr.photo-row td { height: 100%; vertical-align: middle; }
+  .main-table-wrap tr.photo-row { height: auto; }
+  .main-table-wrap tr.photo-row td { height: auto; vertical-align: middle; }
   .print-btn-wrap { text-align: center; margin: 20px 0; }
   .print-btn { padding: 12px 36px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
   .print-btn:hover { background: #1D4ED8; }
   @media print {
     .print-btn-wrap { display: none !important; }
-    .page { min-height: 100%; }
+    .page { height: 100%; max-height: 100%; }
     .photo-area { page-break-inside: avoid; }
   }
   @media screen {
