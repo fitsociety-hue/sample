@@ -107,11 +107,6 @@ function handleLogin(e) {
     return json({ status: 'error', message: '이름 또는 비밀번호가 맞지 않습니다' });
 }
 
-function handleGetGlobalCI(e) {
-    const sharedCI = getSharedCI();
-    return json({ status: 'ok', ciImage: sharedCI });
-}
-
 /* ══════════════════════════════════════════════
    관리자 로그인
    ══════════════════════════════════════════════ */
@@ -398,43 +393,10 @@ function hashPIN(pin) {
 }
 
 /* ══════════════════════════════════════════════
-   글로벌 CI 조회 (Base64 직접 반환)
-   ══════════════════════════════════════════════ */
-function handleGetGlobalCI(e) {
-    const ciUrl = getSharedCI();
-    if (!ciUrl) return json({ status: 'ok', ciImage: '' });
-
-    // Base64 데이터면 그대로 반환
-    if (ciUrl.startsWith('data:image/')) {
-        return json({ status: 'ok', ciImage: ciUrl });
-    }
-
-    // Drive URL이면 파일을 Base64로 변환하여 반환
-    try {
-        let fileId = '';
-        let m = ciUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = ciUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if (m) fileId = m[1];
-
-        if (fileId) {
-            const file = DriveApp.getFileById(fileId);
-            const blob = file.getBlob();
-            const mimeType = blob.getContentType() || 'image/png';
-            const bytes = blob.getBytes();
-            const base64 = Utilities.base64Encode(bytes);
-            const dataUrl = 'data:' + mimeType + ';base64,' + base64;
-            return json({ status: 'ok', ciImage: dataUrl });
-        }
-    } catch (err) {
-        // Drive 접근 실패 시 URL 그대로 반환
-    }
-
-    return json({ status: 'ok', ciImage: ciUrl });
 }
 
 /* ══════════════════════════════════════════════
-   Drive 이미지 → Base64 프록시
+   Drive 이미지 → Base64 프록시 (더 이상 사용안함)
    ══════════════════════════════════════════════ */
 function handleGetImage(e) {
     const fileId = (e.parameter.fileId || '').trim();
@@ -470,30 +432,14 @@ function handleUpdateGlobalCI(data) {
     }
 
     const ciImage = data.ciImage || '';
-    let finalValue = ciImage;
 
-    // Base64 이미지라면 드라이브에 저장 후 URL 반환
-    if (ciImage && ciImage.startsWith('data:image/')) {
-        try {
-            const folder = getOrCreateFolder(DRIVE_FOLDER);
-            const blob = Utilities.newBlob(
-                Utilities.base64Decode(ciImage.split(',')[1]),
-                'image/png',
-                'CI_Logo_Global.png'
-            );
-            const file = folder.createFile(blob);
-            try {
-                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-            } catch (e) { }
-            finalValue = `https://lh3.googleusercontent.com/d/${file.getId()}`;
-        } catch (e) {
-            return json({ status: 'error', message: '드라이브 저장 실패: ' + e.toString() });
-        }
+    // Base64 문자열을 그대로 시트 구획에 저장 (Drive 거치지 않음)
+    try {
+        setSharedCI(ciImage);
+        return json({ status: 'ok', ciUrl: ciImage }); // 호환성을 위해 Base64 그대로 반환
+    } catch (e) {
+        return json({ status: 'error', message: 'CI 이미지 저장 실패: ' + e.toString() });
     }
-
-    // 공유 CI 저장
-    setSharedCI(finalValue);
-    return json({ status: 'ok', ciUrl: finalValue });
 }
 
 /* ══════════════════════════════════════════════
@@ -512,20 +458,40 @@ function getSettingsSheet() {
 function getSharedCI() {
     const sheet = getSettingsSheet();
     const rows = sheet.getDataRange().getValues();
+
+    let chunks = [];
     for (let i = 1; i < rows.length; i++) {
-        if (rows[i][0] === 'ci_image') return rows[i][1] || '';
+        const key = rows[i][0] ? rows[i][0].toString() : '';
+        if (key.startsWith('ci_image_chunk_')) {
+            const index = parseInt(key.split('_').pop(), 10);
+            if (!isNaN(index)) chunks[index] = rows[i][1];
+        } else if (key === 'ci_image') {
+            return rows[i][1] || ''; // 구버전 호환
+        }
     }
+
+    if (chunks.length > 0) return chunks.join('');
     return '';
 }
 
-function setSharedCI(value) {
+function setSharedCI(base64str) {
     const sheet = getSettingsSheet();
     const rows = sheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-        if (rows[i][0] === 'ci_image') {
-            sheet.getRange(i + 1, 2).setValue(value);
-            return;
+
+    // 기존 CI 데이터(단일/청크 모두) 삭제 (아래부터 삭제해야 인덱스 안꼬임)
+    for (let i = rows.length - 1; i >= 1; i--) {
+        const key = rows[i][0] ? rows[i][0].toString() : '';
+        if (key === 'ci_image' || key.startsWith('ci_image_chunk_')) {
+            sheet.deleteRow(i + 1);
         }
     }
-    sheet.appendRow(['ci_image', value]);
+
+    if (!base64str) return;
+
+    // Base64 문자열이 시트 셀 제한(50,000자)을 넘지 않도록 나누어 저장
+    const CHUNK_SIZE = 40000;
+    for (let i = 0; i < base64str.length; i += CHUNK_SIZE) {
+        const chunk = base64str.substring(i, i + CHUNK_SIZE);
+        sheet.appendRow([`ci_image_chunk_${i / CHUNK_SIZE}`, chunk]);
+    }
 }

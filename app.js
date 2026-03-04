@@ -736,15 +736,6 @@ async function syncCIToServer(ciImage) {
             showToast('✅ 로고가 성공적으로 반영되었습니다.');
             if (result.ciUrl) {
                 localStorage.setItem('gi_ci_image', result.ciUrl);
-                let m = result.ciUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
-                if (!m) m = result.ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (m) {
-                    try {
-                        localStorage.setItem('gi_photo_' + m[1], ciImage);
-                    } catch (e) {
-                        console.warn('캐시 저장 실패 (용량 부족 등):', e);
-                    }
-                }
                 loadCIPreview();
             }
         } else {
