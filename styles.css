@@ -129,28 +129,29 @@ body {
 }
 
 .btn-logout {
-    padding: 6px 16px;
-    border: 1.5px solid #999;
+    padding: 7px 18px;
+    border: 2px solid #333;
     border-radius: 20px;
-    background: #fff;
-    color: #222;
+    background: #F3F4F6;
+    color: #000 !important;
     font-family: inherit;
-    font-size: .8rem;
-    font-weight: 700;
+    font-size: .85rem;
+    font-weight: 800;
     cursor: pointer;
     transition: var(--tr);
     white-space: nowrap;
+    letter-spacing: .3px;
 }
 
 .btn-logout:hover {
-    background: #f3f3f3;
-    border-color: #666;
+    background: #E5E7EB;
+    border-color: #111;
     transform: translateY(-1px);
 }
 
 .btn-logout:active {
     transform: translateY(0);
-    background: #eee;
+    background: #D1D5DB;
 }
 
 /* ===== Account Info (Settings Panel) ===== */
