@@ -743,7 +743,9 @@ async function loadHistory() {
     $id('historyList').innerHTML = '';
     const userName = state.user?.name || '';
     try {
-        const res = await fetch(`${GAS_URL}?action=list${userName ? '&name=' + encodeURIComponent(userName) : ''}`);
+        // 캐시 방지를 위한 타임스탬프 추가
+        const ts = Date.now();
+        const res = await fetch(`${GAS_URL}?action=list${userName ? '&name=' + encodeURIComponent(userName) : ''}&_t=${ts}`);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
@@ -757,29 +759,20 @@ function renderHistory(records) {
     if (!records?.length) { $id('historyEmpty').style.display = ''; return; }
     $id('historyEmpty').style.display = 'none';
 
-    // 서버 데이터 + 로컬 캐시 병합
-    const enriched = records.map(r => {
-        const local = getLocalSubmission(r);
-        if (local) {
-            return {
-                ...r,
-                relatedDoc: r.relatedDoc || local.relatedDoc || '',
-                inspectionPlace: r.inspectionPlace || local.inspectionPlace || '',
-                buyerName: r.buyerName || local.buyerName || '',
-                inspectorName: r.inspectorName || local.inspectorName || '',
-                photos: (r.photos && r.photos.length) ? r.photos : (local.photos || []),
-            };
-        }
-        return r;
-    });
+    // 서버 데이터를 직접 사용 (항상 최신 데이터 반영)
+    window._historyRecords = [...records].reverse();
 
-    // 전역 참조용으로 저장
-    window._historyRecords = [...enriched].reverse();
+    // 캐시 방지를 위한 타임스탬프
+    const cacheBuster = Date.now();
 
     $id('historyList').innerHTML = window._historyRecords.map((r, i) => {
-        const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
-        // Drive URL 변환 적용
-        const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
+        const photoSrcs = (r.photoUrls && r.photoUrls.length) ? r.photoUrls : (r.photos && r.photos.length) ? r.photos : [];
+        // Drive URL 변환 적용 + 캐시 방지
+        const reliableSrcs = photoSrcs.map(src => {
+            const url = getReliablePhotoUrl(src);
+            // Drive URL에 캐시 방지 파라미터 추가
+            return url.includes('googleusercontent.com') ? url + (url.includes('?') ? '&' : '?') + '_t=' + cacheBuster : url;
+        });
         const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
             return `<img class="history-thumb" src="${src}" onerror="loadFallbackImage(this)">`;
         }).join('')
@@ -954,22 +947,9 @@ async function saveEditRecord() {
         });
         const result = await res.json();
         if (result.status === 'ok') {
-            // localStorage 캐시도 업데이트
-            const updatedRecord = {
-                ...r,
-                itemName: payload.itemName,
-                itemTotal: payload.itemTotal,
-                inspectionDate: payload.inspectionDate,
-                relatedDoc: payload.relatedDoc,
-                inspectionPlace: payload.inspectionPlace,
-                buyerName: payload.buyerName,
-                inspectorName: payload.inspectorName,
-            };
-            if (result.photoUrls) updatedRecord.photoUrls = result.photoUrls;
-            saveSubmissionToLocal(updatedRecord);
-
             closeEditModal();
             showToast('✅ 수정이 완료되었습니다');
+            // 서버에서 최신 데이터 다시 불러오기
             loadHistory();
         } else {
             showToast('❌ ' + (result.message || '수정 실패'), 'error');
@@ -983,18 +963,7 @@ async function saveEditRecord() {
 }
 
 function printRecord(r) {
-    /* 로컬 캐시에서 누락 데이터 보완 */
-    const local = getLocalSubmission(r);
-    if (local) {
-        const hasServerPhotos = (r.photoUrls && r.photoUrls.length > 0);
-        r.relatedDoc = r.relatedDoc || local.relatedDoc || '';
-        r.inspectionPlace = r.inspectionPlace || local.inspectionPlace || '';
-        r.buyerName = r.buyerName || local.buyerName || '';
-        r.inspectorName = r.inspectorName || local.inspectorName || '';
-        if (!hasServerPhotos && (!r.photos || !r.photos.length) && local.photos && local.photos.length) {
-            r.photos = local.photos;
-        }
-    }
+    /* 서버 데이터를 직접 사용 */
 
     const label = (r.teamName ? `${r.teamName} / ` : '') + (r.name || '');
     const formattedDate = formatKoreanDate(r.inspectionDate || '');
@@ -1220,3 +1189,17 @@ async function confirmDeleteRecord() {
         btn.textContent = '🗑️ 삭제하기';
     }
 }
+
+/* ════════════════════════════════════════════════
+   페이지 가시성 변경 시 자동 새로고침
+   (다른 기기에서 수정한 내용 실시간 반영)
+   ════════════════════════════════════════════════ */
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.user) {
+        // 내 기록 탭이 활성화된 상태면 자동 새로고침
+        const historyPanel = $id('historyPanel');
+        if (historyPanel && historyPanel.style.display !== 'none') {
+            loadHistory();
+        }
+    }
+});
