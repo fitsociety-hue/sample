@@ -16,6 +16,7 @@ const state = {
     editDeleteIndexes: [], // indexes of existing photos to delete
     photoPickerTarget: 'main', // 'main' or 'edit'
     deleteTargetIndex: -1,     // index in _historyRecords for pending delete
+    adminAuth: null,           // { id, pw } - 관리자 인증 정보
 };
 
 /* ── 헬퍼 ── */
@@ -42,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.user = JSON.parse(saved);
             showMainApp();
 
-            // 백그라운드 CI 동기화
-            fetch(`${GAS_URL}?action=get_ci&userId=${encodeURIComponent(state.user.userId)}`)
+            // 백그라운드 글로벌 CI 동기화
+            fetch(`${GAS_URL}?action=get_global_ci`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'ok') {
@@ -74,11 +75,6 @@ function showMainApp() {
     show('headerUser');
     $id('headerUserName').textContent =
         (state.user.teamName ? state.user.teamName + ' / ' : '') + state.user.name;
-    // 설정 패널 계정 정보
-    const sName = $id('settingsUserName');
-    const sTeam = $id('settingsTeamName');
-    if (sName) sName.textContent = '👤 ' + (state.user.name || '-');
-    if (sTeam) sTeam.textContent = state.user.teamName ? '🏢 ' + state.user.teamName : '';
     setVal('inspectionDate', new Date().toISOString().split('T')[0]);
 
     $id('itemTotal').addEventListener('blur', () => formatNumber('itemTotal'));
@@ -612,7 +608,50 @@ function switchTab(tab) {
     $id('historyPanel').style.display = tab === 'history' ? '' : 'none';
     $id('settingsPanel').style.display = tab === 'settings' ? '' : 'none';
     if (tab === 'history') loadHistory();
-    if (tab === 'settings') loadCIPreview();
+    if (tab === 'settings') {
+        // 관리자 인증 상태 확인
+        if (state.adminAuth) {
+            show('adminSettingsArea');
+            hide('adminLoginArea');
+            loadCIPreview();
+        } else {
+            show('adminLoginArea');
+            hide('adminSettingsArea');
+        }
+    }
+}
+
+async function adminLogin() {
+    const id = getVal('adminId');
+    const pw = getVal('adminPw');
+    const errorDiv = $id('adminLoginError');
+    const btn = $id('adminLoginBtn');
+
+    if (!id || !pw) {
+        if (errorDiv) errorDiv.textContent = '아이디와 비밀번호를 입력해주세요.';
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = '인증 중...'; }
+    if (errorDiv) errorDiv.textContent = '';
+
+    try {
+        const res = await fetch(`${GAS_URL}?action=admin_login&id=${encodeURIComponent(id)}&pin=${encodeURIComponent(pw)}`);
+        const data = await res.json();
+        if (data.status === 'ok') {
+            state.adminAuth = { id, pw };
+            hide('adminLoginArea');
+            show('adminSettingsArea');
+            loadCIPreview();
+            showToast('✅ 관리자 인증 성공');
+        } else {
+            if (errorDiv) errorDiv.textContent = data.message || '인증 실패';
+        }
+    } catch (err) {
+        if (errorDiv) errorDiv.textContent = '네트워크 오류: ' + err.message;
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔑 관리자 로그인'; }
+    }
 }
 
 /* ════════════════════════════════════════════════
@@ -671,21 +710,23 @@ async function saveCIImage() {
 }
 
 async function syncCIToServer(ciImage) {
-    if (!state.user) return;
+    if (!state.adminAuth) {
+        showToast('❌ 관리자 인증이 필요합니다.', 'error');
+        return;
+    }
     fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
-            action: 'update_ci',
-            userId: state.user.userId,
+            action: 'update_global_ci',
+            adminId: state.adminAuth.id,
+            adminPin: state.adminAuth.pw,
             ciImage: ciImage
         })
     }).then(r => r.json()).then(result => {
         if (result.status === 'ok') {
             showToast('✅ 로고가 성공적으로 반영되었습니다.');
             if (result.ciUrl) {
-                // 백엔드에서 Drive URL로 변환해준 경우 업데이트
                 localStorage.setItem('gi_ci_image', result.ciUrl);
-                // 방금 업로드한 원본 Base64 데이터를 캐시에 저장
                 let m = result.ciUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
                 if (!m) m = result.ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
                 if (m) {

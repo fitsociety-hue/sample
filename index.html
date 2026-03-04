@@ -105,7 +105,7 @@
         <nav class="tab-nav">
             <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">📝 새 문서 작성</button>
             <button class="nav-tab" id="tabHistory" onclick="switchTab('history')">📁 내 기록</button>
-            <button class="nav-tab" id="tabSettings" onclick="switchTab('settings')">⚙️ 설정</button>
+            <button class="nav-tab" id="tabSettings" onclick="switchTab('settings')">🔒 관리자 설정</button>
         </nav>
 
         <main class="container">
@@ -254,47 +254,59 @@
 
             <!-- ====== SETTINGS ====== -->
             <div id="settingsPanel" style="display:none; padding-bottom:40px;">
-                <div class="card">
-                    <div class="card-header">
-                        <h2><span class="card-icon">🏢</span> 복지관 CI 설정</h2>
-                        <p class="card-desc">인쇄물 하단 오른쪽에 표시될 복지관 CI 이미지를 등록하세요</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="ci-upload-area">
-                            <div id="ciPreview" class="ci-preview" style="display:none;">
-                                <img id="ciPreviewImg" src="" alt="CI 미리보기">
+
+                <!-- 관리자 로그인 폼 -->
+                <div id="adminLoginArea">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><span class="card-icon">🔒</span> 관리자 인증</h2>
+                            <p class="card-desc">관리자 설정에 접근하려면 관리자 아이디와 비밀번호를 입력하세요</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>아이디</label>
+                                <input type="text" id="adminId" placeholder="관리자 아이디 입력" autocomplete="off">
                             </div>
-                            <div id="ciEmpty" class="ci-empty">
-                                <span class="ci-empty-icon">🖼️</span>
-                                <p>CI 이미지가 등록되지 않았습니다</p>
+                            <div class="form-group">
+                                <label>비밀번호</label>
+                                <input type="password" id="adminPw" placeholder="비밀번호 입력" autocomplete="off">
                             </div>
-                            <div class="ci-actions">
-                                <input type="file" id="ciInput" accept="image/*" style="display:none;"
-                                    onchange="handleCIUpload(event)">
-                                <button class="btn btn-primary btn-small"
-                                    onclick="document.getElementById('ciInput').click()">📁 CI 이미지 첨부</button>
-                                <button class="btn btn-submit btn-small" id="ciSaveBtn" style="display:none;"
-                                    onclick="saveCIImage()">💾 설정 저장</button>
-                                <button class="btn btn-outline btn-small" id="ciDeleteBtn" style="display:none;"
-                                    onclick="deleteCIImage()">🗑️ 삭제</button>
+                            <div id="adminLoginError" style="color:#EF4444; font-size:0.85rem; margin-bottom:8px;">
                             </div>
+                            <button class="btn btn-primary" id="adminLoginBtn" onclick="adminLogin()"
+                                style="width:100%;">🔑 관리자 로그인</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 계정 정보 & 로그아웃 -->
-                <div class="card" style="margin-top:16px;">
-                    <div class="card-header">
-                        <h2><span class="card-icon">👤</span> 계정 정보</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="account-info">
-                            <div class="account-details">
-                                <div class="account-name" id="settingsUserName">-</div>
-                                <div class="account-team" id="settingsTeamName">-</div>
+                <!-- 관리자 설정 영역 (인증 후 표시) -->
+                <div id="adminSettingsArea" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><span class="card-icon">🏢</span> 복지관 CI 설정 (관리자)</h2>
+                            <p class="card-desc">여기서 설정한 CI 이미지가 모든 직원의 물품검수조서에 자동 적용됩니다</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="ci-upload-area">
+                                <div id="ciPreview" class="ci-preview" style="display:none;">
+                                    <img id="ciPreviewImg" src="" alt="CI 미리보기">
+                                </div>
+                                <div id="ciEmpty" class="ci-empty">
+                                    <span class="ci-empty-icon">🖼️</span>
+                                    <p>CI 이미지가 등록되지 않았습니다</p>
+                                </div>
+                                <div class="ci-actions">
+                                    <input type="file" id="ciInput" accept="image/*" style="display:none;"
+                                        onchange="handleCIUpload(event)">
+                                    <button class="btn btn-primary btn-small"
+                                        onclick="document.getElementById('ciInput').click()">📁 CI 이미지 첨부</button>
+                                    <button class="btn btn-submit btn-small" id="ciSaveBtn" style="display:none;"
+                                        onclick="saveCIImage()">💾 설정 저장</button>
+                                    <button class="btn btn-outline btn-small" id="ciDeleteBtn" style="display:none;"
+                                        onclick="deleteCIImage()">🗑️ 삭제</button>
+                                </div>
                             </div>
                         </div>
-                        <button class="btn btn-logout-full" onclick="logout()">🚪 로그아웃</button>
                     </div>
                 </div>
             </div>

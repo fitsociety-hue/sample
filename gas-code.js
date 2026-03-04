@@ -7,7 +7,10 @@ const SPREADSHEET_ID = '1CrB6AQEMm8JxnJ8HTVK-gVkwCWtcC8NhIecsEBUSL5M';
 const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`;
 const LOG_SHEET = '제출기록';
 const USER_SHEET = '회원정보';
+const SETTINGS_SHEET = '설정';
 const DRIVE_FOLDER = '물품검수조서';
+const ADMIN_ID = 'admin';
+const ADMIN_PIN = '1107';
 
 /* ── GET ─────────────────────────────────────── */
 function doGet(e) {
@@ -18,8 +21,9 @@ function doGet(e) {
     if (action === 'register') return handleRegister(e);
     if (action === 'login') return handleLogin(e);
     if (action === 'list') return handleList(e);
-    if (action === 'get_ci') return handleGetCI(e);
+    if (action === 'get_global_ci') return handleGetGlobalCI(e);
     if (action === 'get_image') return handleGetImage(e);
+    if (action === 'admin_login') return handleAdminLogin(e);
 
     return json({ status: 'ok', version: 4 });
 }
@@ -31,7 +35,7 @@ function doPost(e) {
         if (data.action === 'register') return handleRegisterPost(data);
         if (data.action === 'update') return handleUpdate(data);
         if (data.action === 'delete') return handleDelete(data);
-        if (data.action === 'update_ci') return handleUpdateCI(data);
+        if (data.action === 'update_global_ci') return handleUpdateGlobalCI(data);
         return handleSubmit(data);
     } catch (err) {
         return json({ status: 'error', message: err.toString() });
@@ -89,34 +93,35 @@ function handleLogin(e) {
 
     for (let i = 1; i < rows.length; i++) {
         if (rows[i][1] === name && rows[i][3] === pinHash) {
+            // 공유 CI 가져오기
+            const sharedCI = getSharedCI();
             return json({
                 status: 'ok',
                 userId: rows[i][0],
                 name: rows[i][1],
                 teamName: rows[i][2],
-                ciImage: rows[i][5] || '', // 6번째 열 (F열)에 CI 저장
+                ciImage: sharedCI,
             });
         }
     }
     return json({ status: 'error', message: '이름 또는 비밀번호가 맞지 않습니다' });
 }
 
-function handleGetCI(e) {
-    const userId = e.parameter.userId;
-    if (!userId) return json({ status: 'error', message: 'userId가 필요합니다' });
+function handleGetGlobalCI(e) {
+    const sharedCI = getSharedCI();
+    return json({ status: 'ok', ciImage: sharedCI });
+}
 
-    const sheet = getUserSheet();
-    const rows = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < rows.length; i++) {
-        if (rows[i][0] === userId) {
-            return json({
-                status: 'ok',
-                ciImage: rows[i][5] || ''
-            });
-        }
+/* ══════════════════════════════════════════════
+   관리자 로그인
+   ══════════════════════════════════════════════ */
+function handleAdminLogin(e) {
+    const id = (e.parameter.id || '').trim();
+    const pw = (e.parameter.pw || '').trim();
+    if (id === 'admin' && pw === '1107') {
+        return json({ status: 'ok', message: '관리자 인증 성공' });
     }
-    return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
+    return json({ status: 'error', message: '아이디 또는 비밀번호가 올바르지 않습니다' });
 }
 
 /* ══════════════════════════════════════════════
@@ -403,41 +408,73 @@ function json(obj) {
 }
 
 /* ══════════════════════════════════════════════
-   CI 이미지 업데이트
+   CI 이미지 업데이트 (공유 CI - 관리자 전용)
    ══════════════════════════════════════════════ */
-function handleUpdateCI(data) {
-    const sheet = getUserSheet();
-    const rows = sheet.getDataRange().getValues();
-    const userId = data.userId;
+function handleUpdateGlobalCI(data) {
+    // 관리자 인증 확인
+    const adminId = (data.adminId || '').trim();
+    const adminPin = (data.adminPin || '').trim();
+    if (adminId !== ADMIN_ID || adminPin !== ADMIN_PIN) {
+        return json({ status: 'error', message: '관리자 인증 실패' });
+    }
+
     const ciImage = data.ciImage || '';
+    let finalValue = ciImage;
 
-    // Find the user row and update 6th column (index 5)
-    for (let i = 1; i < rows.length; i++) {
-        if (rows[i][0] === userId) {
-            let finalValue = ciImage;
-
-            // 만약 새로 업로드된 Base64 이미지라면 드라이브에 저장 후 URL 반환
-            if (ciImage && ciImage.startsWith('data:image/')) {
-                try {
-                    const folder = getOrCreateFolder(DRIVE_FOLDER);
-                    const blob = Utilities.newBlob(
-                        Utilities.base64Decode(ciImage.split(',')[1]),
-                        'image/png',
-                        `CI_Logo_${userId}.png`
-                    );
-                    const file = folder.createFile(blob);
-                    try {
-                        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-                    } catch (e) { }
-                    finalValue = `https://lh3.googleusercontent.com/d/${file.getId()}`;
-                } catch (e) {
-                    return json({ status: 'error', message: '드라이브 저장 실패: ' + e.toString() });
-                }
-            }
-
-            sheet.getRange(i + 1, 6).setValue(finalValue);
-            return json({ status: 'ok', ciUrl: finalValue });
+    // Base64 이미지라면 드라이브에 저장 후 URL 반환
+    if (ciImage && ciImage.startsWith('data:image/')) {
+        try {
+            const folder = getOrCreateFolder(DRIVE_FOLDER);
+            const blob = Utilities.newBlob(
+                Utilities.base64Decode(ciImage.split(',')[1]),
+                'image/png',
+                'CI_Logo_Global.png'
+            );
+            const file = folder.createFile(blob);
+            try {
+                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            } catch (e) { }
+            finalValue = `https://lh3.googleusercontent.com/d/${file.getId()}`;
+        } catch (e) {
+            return json({ status: 'error', message: '드라이브 저장 실패: ' + e.toString() });
         }
     }
-    return json({ status: 'error', message: '사용자를 찾을 수 없습니다' });
+
+    // 공유 CI 저장
+    setSharedCI(finalValue);
+    return json({ status: 'ok', ciUrl: finalValue });
+}
+
+/* ══════════════════════════════════════════════
+   공유 CI 헬퍼 (설정 시트 사용)
+   ══════════════════════════════════════════════ */
+function getSettingsSheet() {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName('설정');
+    if (!sheet) {
+        sheet = ss.insertSheet('설정');
+        sheet.appendRow(['key', 'value']);
+    }
+    return sheet;
+}
+
+function getSharedCI() {
+    const sheet = getSettingsSheet();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === 'ci_image') return rows[i][1] || '';
+    }
+    return '';
+}
+
+function setSharedCI(value) {
+    const sheet = getSettingsSheet();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === 'ci_image') {
+            sheet.getRange(i + 1, 2).setValue(value);
+            return;
+        }
+    }
+    sheet.appendRow(['ci_image', value]);
 }
