@@ -577,7 +577,14 @@ function showSuccessModal(result, u) {
     <div class="modal-icon">✅</div>
     <h3>제출 완료!</h3>
     <p><strong>${label}</strong>의<br>물품검수조서가 저장되었습니다.</p>
-    <button class="btn btn-primary" style="width:100%;box-sizing:border-box;margin-bottom:10px;" onclick="resetForm()">새 문서 작성</button>`;
+    <button class="btn btn-primary" style="width:100%;box-sizing:border-box;margin-bottom:10px;" onclick="resetForm()">새 문서 작성</button>
+    <button class="btn btn-outline" style="width:100%;box-sizing:border-box;" onclick="goToMyHistory()">📁 내 작성 기록 확인하기</button>`;
+}
+
+function goToMyHistory() {
+    $id('successModal').style.display = 'none';
+    resetForm();
+    switchTab('history');
 }
 
 /* ════════════════════════════════════════════════
@@ -989,17 +996,17 @@ function printRecord(r) {
         let photoItems = '';
         if (n === 1) {
             gridStyle = 'display:flex; justify-content:center; align-items:center; height:100%;';
-            photoItems = `<div style="width:70%; text-align:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:380px; object-fit:contain;"></div>`;
+            photoItems = `<div style="width:95%; text-align:center;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="max-width:100%; max-height:500px; object-fit:contain;"></div>`;
         } else if (n === 2) {
             gridStyle = 'display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:center;';
-            photoItems = photoSrcs.map(p => `<div style="width:80%;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+            photoItems = photoSrcs.map(p => `<div style="width:95%;"><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:240px; object-fit:contain;"></div>`).join('');
         } else if (n === 3) {
             gridStyle = 'display:grid; grid-template-columns:1fr 1fr; gap:4px; height:100%;';
-            photoItems = `<div style="grid-column:span 2;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; max-height:220px; object-fit:contain;"></div>`;
-            photoItems += photoSrcs.slice(1).map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:160px; object-fit:contain;"></div>`).join('');
+            photoItems = `<div style="grid-column:span 2;"><img src="${photoSrcs[0]}" onerror="loadFallback(this)" style="width:100%; max-height:300px; object-fit:contain;"></div>`;
+            photoItems += photoSrcs.slice(1).map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; max-height:220px; object-fit:contain;"></div>`).join('');
         } else {
             gridStyle = 'display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; height:100%;';
-            photoItems = photoSrcs.map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; max-height:190px; object-fit:contain;"></div>`).join('');
+            photoItems = photoSrcs.map(p => `<div><img src="${p}" onerror="loadFallback(this)" style="width:100%; height:100%; max-height:240px; object-fit:contain;"></div>`).join('');
         }
         photosHTML = `<div style="${gridStyle}">${photoItems}</div>`;
     }
