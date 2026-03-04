@@ -43,22 +43,48 @@ document.addEventListener('DOMContentLoaded', () => {
             state.user = JSON.parse(saved);
             showMainApp();
 
-            // 백그라운드 글로벌 CI 동기화
-            fetch(`${GAS_URL}?action=get_global_ci`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        if (data.ciImage) localStorage.setItem('gi_ci_image', data.ciImage);
-                        else localStorage.removeItem('gi_ci_image');
-                        loadCIPreview();
-                    }
-                }).catch(console.error);
-
+            // 백그라운드 글로벌 CI 동기화 (로그인 세션 복원 시)
+            fetchGlobalCI();
             return;
         }
     } catch (_) { }
     showAuthScreen();
 });
+/* ── 글로벌 CI 서버에서 가져오기 ── */
+function fetchGlobalCI() {
+    fetch(`${GAS_URL}?action=get_global_ci`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                if (data.ciImage) {
+                    localStorage.setItem('gi_ci_image', data.ciImage);
+                    // Drive URL인 경우 GAS 프록시로 Base64 캐시
+                    const url = data.ciImage;
+                    let fileId = null;
+                    let m = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+                    if (!m) m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (!m) m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                    if (m) fileId = m[1];
+                    if (fileId && !localStorage.getItem('gi_photo_' + fileId)) {
+                        // GAS 프록시로 Base64 가져와서 캐시
+                        fetch(`${GAS_URL}?action=get_image&fileId=${fileId}`)
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.status === 'ok' && d.dataUrl) {
+                                    try { localStorage.setItem('gi_photo_' + fileId, d.dataUrl); } catch (e) { }
+                                }
+                                loadCIPreview();
+                            }).catch(() => loadCIPreview());
+                        return;
+                    }
+                }
+                loadCIPreview();
+            }
+        }).catch(err => {
+            console.error('글로벌 CI 로드 실패:', err);
+            loadCIPreview();
+        });
+}
 
 /* ════════════════════════════════════════════════
    AUTH
@@ -110,9 +136,9 @@ async function login() {
             state.user = { userId: data.userId, name: data.name, teamName: data.teamName };
             localStorage.setItem('gi_user', JSON.stringify(state.user));
 
+            // 로그인 시 글로벌 CI 가져오기
             if (data.ciImage) localStorage.setItem('gi_ci_image', data.ciImage);
-            else localStorage.removeItem('gi_ci_image');
-            loadCIPreview();
+            fetchGlobalCI(); // 최신 CI 다시 가져오기
 
             showMainApp();
         } else {
