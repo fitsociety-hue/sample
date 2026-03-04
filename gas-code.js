@@ -213,21 +213,16 @@ function writeToSpreadsheet(data) {
    기록 조회 (userId 필터)
    ══════════════════════════════════════════════ */
 function handleList(e) {
-    const userId = e.parameter.userId || '';
-    const name = e.parameter.name || '';
+    const userId = (e.parameter.userId || '').trim();
+    if (!userId) return json([]);  // userId 필수
+
     const log = getLogSheet();
     if (!log || log.getLastRow() < 2) return json([]);
 
     const lastCol = log.getLastColumn();
     const rows = log.getRange(2, 1, log.getLastRow() - 1, Math.max(lastCol, 15)).getValues();
     const result = rows
-        .filter(r => {
-            // name 기반 필터 (크로스 프로필 지원)
-            if (name) return r[5] === name;
-            // userId 기반 필터 (하위 호환)
-            if (userId) return r[1] === userId;
-            return true;
-        })
+        .filter(r => String(r[1]).trim() === userId)
         .map(r => ({
             rowId: r[0],
             userId: r[1],

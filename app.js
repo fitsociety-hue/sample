@@ -813,10 +813,16 @@ async function loadHistory() {
     $id('historyEmpty').style.display = 'none';
     $id('historyList').innerHTML = '';
     const userId = state.user?.userId || '';
+    if (!userId) {
+        $id('historyLoading').style.display = 'none';
+        $id('historyEmpty').style.display = '';
+        $id('historyEmpty').textContent = '로그인이 필요합니다';
+        return;
+    }
     try {
         // 캐시 방지를 위한 타임스탬프 추가
         const ts = Date.now();
-        const res = await fetch(`${GAS_URL}?action=list${userId ? '&userId=' + encodeURIComponent(userId) : ''}&_t=${ts}`);
+        const res = await fetch(`${GAS_URL}?action=list&userId=${encodeURIComponent(userId)}&_t=${ts}`);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
