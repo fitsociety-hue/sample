@@ -393,10 +393,15 @@ function hashPIN(pin) {
 }
 
 /* ══════════════════════════════════════════════
+   글로벌 CI 조회
+   ══════════════════════════════════════════════ */
+function handleGetGlobalCI(e) {
+    const ciUrl = getSharedCI();
+    return json({ status: 'ok', ciImage: ciUrl || '' });
 }
 
 /* ══════════════════════════════════════════════
-   Drive 이미지 → Base64 프록시 (더 이상 사용안함)
+   Drive 이미지 → Base64 프록시(더 이상 사용안함)
    ══════════════════════════════════════════════ */
 function handleGetImage(e) {
     const fileId = (e.parameter.fileId || '').trim();
