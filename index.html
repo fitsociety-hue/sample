@@ -17,13 +17,6 @@
 
     <!-- ========== HEADER ========== -->
     <header class="app-header">
-        <!-- 로그인/로그아웃 버튼 (우측 상단 고정) -->
-        <div class="header-top-bar">
-            <div class="header-top-right" id="headerUser" style="display:none;">
-                <span class="user-badge" id="headerUserName"></span>
-                <button class="btn-logout" onclick="logout()">🚪 로그아웃</button>
-            </div>
-        </div>
         <div class="header-content">
             <div class="logo-area">
                 <div class="logo-icon">📋</div>
@@ -31,6 +24,11 @@
                     <h1>물품검수조서</h1>
                     <div class="subtitle">강동어울림복지관</div>
                 </div>
+            </div>
+            <!-- 로그인 사용자 정보 (로그인 후 표시) -->
+            <div class="header-user-area" id="headerUser" style="display:none;">
+                <span class="user-badge" id="headerUserName"></span>
+                <button class="btn-logout" onclick="logout()">로그아웃</button>
             </div>
         </div>
     </header>

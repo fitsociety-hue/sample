@@ -107,17 +107,8 @@ body {
     font-weight: 400;
 }
 
-/* ===== Header Top Bar (Logout) ===== */
-.header-top-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 6px 16px 0;
-    max-width: 720px;
-    margin: 0 auto;
-}
-
-.header-top-right {
+/* ===== Header User Area & Logout ===== */
+.header-user-area {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -138,29 +129,28 @@ body {
 }
 
 .btn-logout {
-    padding: 6px 14px;
-    border: none;
+    padding: 6px 16px;
+    border: 1.5px solid #999;
     border-radius: 20px;
-    background: var(--danger);
-    color: #fff;
+    background: #fff;
+    color: #222;
     font-family: inherit;
-    font-size: .78rem;
+    font-size: .8rem;
     font-weight: 700;
     cursor: pointer;
     transition: var(--tr);
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, .3);
 }
 
 .btn-logout:hover {
-    background: #DC2626;
-    box-shadow: 0 4px 14px rgba(239, 68, 68, .4);
+    background: #f3f3f3;
+    border-color: #666;
     transform: translateY(-1px);
 }
 
 .btn-logout:active {
     transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(239, 68, 68, .3);
+    background: #eee;
 }
 
 /* ===== Account Info (Settings Panel) ===== */
