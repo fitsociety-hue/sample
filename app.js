@@ -58,25 +58,8 @@ function fetchGlobalCI() {
             if (data.status === 'ok') {
                 if (data.ciImage) {
                     localStorage.setItem('gi_ci_image', data.ciImage);
-                    // Drive URL인 경우 GAS 프록시로 Base64 캐시
-                    const url = data.ciImage;
-                    let fileId = null;
-                    let m = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
-                    if (!m) m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (!m) m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                    if (m) fileId = m[1];
-                    if (fileId && !localStorage.getItem('gi_photo_' + fileId)) {
-                        // GAS 프록시로 Base64 가져와서 캐시
-                        fetch(`${GAS_URL}?action=get_image&fileId=${fileId}`)
-                            .then(r => r.json())
-                            .then(d => {
-                                if (d.status === 'ok' && d.dataUrl) {
-                                    try { localStorage.setItem('gi_photo_' + fileId, d.dataUrl); } catch (e) { }
-                                }
-                                loadCIPreview();
-                            }).catch(() => loadCIPreview());
-                        return;
-                    }
+                } else {
+                    localStorage.removeItem('gi_ci_image');
                 }
                 loadCIPreview();
             }
@@ -1105,31 +1088,7 @@ async function printRecord(r) {
 
     let ciHTML = '';
     if (ciData) {
-        let finalSrc = ciData;
-        // Drive URL인 경우 Base64 캐시 확인 또는 서버에서 가져오기
-        let fileId = null;
-        let m = ciData.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = ciData.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (!m) m = ciData.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if (m) fileId = m[1];
-
-        if (fileId) {
-            const cached = localStorage.getItem('gi_photo_' + fileId);
-            if (cached) {
-                finalSrc = cached;
-            } else {
-                // 서버에서 Base64 변환하여 가져오기
-                try {
-                    const imgRes = await fetch(`${GAS_URL}?action=get_image&fileId=${fileId}`);
-                    const imgResult = await imgRes.json();
-                    if (imgResult.status === 'ok' && imgResult.dataUrl) {
-                        finalSrc = imgResult.dataUrl;
-                        try { localStorage.setItem('gi_photo_' + fileId, finalSrc); } catch (e) { }
-                    }
-                } catch (e) { console.error('CI 이미지 변환 실패:', e); }
-            }
-        }
-        ciHTML = `<img src="${finalSrc}" style="max-height:60px; object-fit:contain;">`;
+        ciHTML = `<img src="${ciData}" style="max-height:60px; object-fit:contain;">`;
     }
 
     w.document.write(`<!DOCTYPE html>

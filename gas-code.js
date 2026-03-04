@@ -398,11 +398,39 @@ function hashPIN(pin) {
 }
 
 /* ══════════════════════════════════════════════
-   글로벌 CI 조회
+   글로벌 CI 조회 (Base64 직접 반환)
    ══════════════════════════════════════════════ */
 function handleGetGlobalCI(e) {
-    const ciImage = getSharedCI();
-    return json({ status: 'ok', ciImage: ciImage });
+    const ciUrl = getSharedCI();
+    if (!ciUrl) return json({ status: 'ok', ciImage: '' });
+
+    // Base64 데이터면 그대로 반환
+    if (ciUrl.startsWith('data:image/')) {
+        return json({ status: 'ok', ciImage: ciUrl });
+    }
+
+    // Drive URL이면 파일을 Base64로 변환하여 반환
+    try {
+        let fileId = '';
+        let m = ciUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = ciUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (!m) m = ciUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (m) fileId = m[1];
+
+        if (fileId) {
+            const file = DriveApp.getFileById(fileId);
+            const blob = file.getBlob();
+            const mimeType = blob.getContentType() || 'image/png';
+            const bytes = blob.getBytes();
+            const base64 = Utilities.base64Encode(bytes);
+            const dataUrl = 'data:' + mimeType + ';base64,' + base64;
+            return json({ status: 'ok', ciImage: dataUrl });
+        }
+    } catch (err) {
+        // Drive 접근 실패 시 URL 그대로 반환
+    }
+
+    return json({ status: 'ok', ciImage: ciUrl });
 }
 
 /* ══════════════════════════════════════════════
