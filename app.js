@@ -730,9 +730,9 @@ async function loadHistory() {
     $id('historyLoading').style.display = 'flex';
     $id('historyEmpty').style.display = 'none';
     $id('historyList').innerHTML = '';
-    const userId = state.user?.userId || '';
+    const userName = state.user?.name || '';
     try {
-        const res = await fetch(`${GAS_URL}?action=list${userId ? '&userId=' + encodeURIComponent(userId) : ''}`);
+        const res = await fetch(`${GAS_URL}?action=list${userName ? '&name=' + encodeURIComponent(userName) : ''}`);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
@@ -769,12 +769,12 @@ function renderHistory(records) {
         const photoSrcs = (r.photos && r.photos.length) ? r.photos : (r.photoUrls && r.photoUrls.length) ? r.photoUrls : [];
         // Drive URL 변환 적용
         const reliableSrcs = photoSrcs.map(src => getReliablePhotoUrl(src));
-        const thumbsHTML = reliableSrcs.length ? `< div class="history-photos" > ${reliableSrcs.slice(0, 4).map(src => {
+        const thumbsHTML = reliableSrcs.length ? `<div class="history-photos">${reliableSrcs.slice(0, 4).map(src => {
             return `<img class="history-thumb" src="${src}" onerror="loadFallbackImage(this)">`;
         }).join('')
-            }${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div > ` : '';
+            }${reliableSrcs.length > 4 ? `<span class="history-badge" style="align-self:center;">+${reliableSrcs.length - 4}</span>` : ''}</div>` : '';
         return `
-        < div class="history-card" >
+        <div class="history-card">
             <div class="history-header">
                 <span class="history-item-name">${r.itemName || '(품목 없음)'}</span>
                 <span class="history-date">${r.submittedAt || ''}</span>
@@ -792,7 +792,7 @@ function renderHistory(records) {
         <button class="history-link history-print-btn" onclick="printRecord(window._historyRecords[${i}])">🖨️ 인쇄/PDF</button>
         <button class="history-link btn-delete" onclick="deleteRecord(${i})">🗑️ 삭제</button>
     </div>
-    </div > `;
+    </div>`;
     }).join('');
 }
 
@@ -844,7 +844,7 @@ function renderEditPhotos() {
         const fallback = getPhotoFallbackUrl(p.src);
         const isDeleted = p.markedDelete;
         return `
-        < div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}" >
+        <div class="edit-photo-item${isDeleted ? ' marked-delete' : ''}">
             <img src="${p.src}" onerror="loadFallbackImage(this)">
                 ${isDeleted
                 ? `<div class="edit-photo-delete-overlay">
