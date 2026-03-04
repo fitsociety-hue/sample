@@ -571,16 +571,13 @@ async function submitDocument() {
 }
 
 function showSuccessModal(result, u) {
-    const link = `<a href="${result.sheetUrl}" target="_blank" class="btn btn-primary"
-         style="text-decoration:none;display:block;margin-bottom:10px;width:100%;box-sizing:border-box;">📄 저장된 문서 열기</a>`;
     const label = (u.teamName ? `${u.teamName} / ` : '') + (u.name || '');
     $id('successModal').style.display = 'flex';
     $id('successModal').querySelector('.modal-content').innerHTML = `
     <div class="modal-icon">✅</div>
     <h3>제출 완료!</h3>
     <p><strong>${label}</strong>의<br>물품검수조서가 저장되었습니다.</p>
-    ${link}
-    <button class="btn btn-outline" style="width:100%;box-sizing:border-box;" onclick="resetForm()">새 문서 작성</button>`;
+    <button class="btn btn-primary" style="width:100%;box-sizing:border-box;margin-bottom:10px;" onclick="resetForm()">새 문서 작성</button>`;
 }
 
 /* ════════════════════════════════════════════════
@@ -741,11 +738,11 @@ async function loadHistory() {
     $id('historyLoading').style.display = 'flex';
     $id('historyEmpty').style.display = 'none';
     $id('historyList').innerHTML = '';
-    const userName = state.user?.name || '';
+    const userId = state.user?.userId || '';
     try {
         // 캐시 방지를 위한 타임스탬프 추가
         const ts = Date.now();
-        const res = await fetch(`${GAS_URL}?action=list${userName ? '&name=' + encodeURIComponent(userName) : ''}&_t=${ts}`);
+        const res = await fetch(`${GAS_URL}?action=list${userId ? '&userId=' + encodeURIComponent(userId) : ''}&_t=${ts}`);
         renderHistory(await res.json());
     } catch {
         $id('historyLoading').style.display = 'none';
@@ -792,7 +789,7 @@ function renderHistory(records) {
       ${thumbsHTML}
     <div class="history-actions">
         <button class="history-link" onclick="openEditRecord(${i})">✏️ 수정</button>
-        ${r.sheetUrl ? `<a href="${r.sheetUrl}" target="_blank" class="history-link">📄 열기</a>` : ''}
+
         <button class="history-link history-print-btn" onclick="printRecord(window._historyRecords[${i}])">🖨️ 인쇄/PDF</button>
         <button class="history-link btn-delete" onclick="deleteRecord(${i})">🗑️ 삭제</button>
     </div>

@@ -526,7 +526,7 @@ body {
 
 .photo-grid {
     display: grid;
-    gap: 10px;
+    gap: 6px;
     margin-top: 12px;
 }
 
@@ -538,8 +538,8 @@ body {
 
 .photo-grid.grid-1 .photo-item {
     width: 100%;
-    max-width: 500px;
     margin: 0 auto;
+    aspect-ratio: 4/3;
 }
 
 .photo-grid.grid-2 {
@@ -1703,7 +1703,7 @@ body {
 .preview-photo-grid {
     display: grid;
     width: 100%;
-    height: 320px;
+    height: 380px;
     gap: 2px;
 }
 
@@ -1985,27 +1985,27 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 320px;
+    height: 380px;
     gap: 0;
 }
 
 .preview-photo-grid.grid-1 .preview-photo {
-    width: auto;
-    max-width: 90%;
+    width: 100%;
+    max-width: 100%;
     height: auto;
     max-height: 100%;
     background: transparent;
 }
 
 .preview-photo-grid.grid-1 .preview-photo img {
-    width: auto;
+    width: 100%;
     max-width: 100%;
     height: auto;
-    max-height: 310px;
+    max-height: 370px;
     object-fit: contain;
 }
 
-/* 2장: 위아래 세로 배치, 중앙 정렬 */
+/* 2장: 위아래 세로 배치, 꽉 채우기 */
 .preview-photo-grid.grid-2 {
     display: flex;
     flex-direction: column;
@@ -2015,7 +2015,7 @@ body {
 }
 
 .preview-photo-grid.grid-2 .preview-photo {
-    width: 80%;
+    width: 100%;
     aspect-ratio: 4/3;
 }
 
