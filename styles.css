@@ -107,6 +107,51 @@ body {
     font-weight: 400;
 }
 
+/* ===== User Info & Logout ===== */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-badge {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--blue-700);
+    background: var(--blue-50);
+    border: 1px solid var(--blue-200);
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-logout {
+    padding: 5px 12px;
+    border: 1.5px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--danger);
+    font-family: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--tr);
+    white-space: nowrap;
+}
+
+.btn-logout:hover {
+    background: #FEE2E2;
+    border-color: var(--danger);
+    transform: translateY(-1px);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+}
+
 /* ===== Tab Navigation ===== */
 .tab-nav {
     display: flex;

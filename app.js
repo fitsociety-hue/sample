@@ -171,10 +171,16 @@ async function register() {
 function logout() {
     if (!confirm('로그아웃 하시겠습니까?')) return;
     localStorage.removeItem('gi_user');
+    localStorage.removeItem('gi_ci_image_pending');
     state.user = null; state.photos = []; state.currentStep = 1;
     hide('mainWrapper');
     showAuthScreen();
     resetForm(true);
+    // 로그인 폼 초기화
+    setVal('loginName', '');
+    ['lpin0', 'lpin1', 'lpin2', 'lpin3'].forEach(id => setVal(id, ''));
+    $id('loginError').textContent = '';
+    showToast('로그아웃 되었습니다');
 }
 
 /* ════════════════════════════════════════════════
