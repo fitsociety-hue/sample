@@ -74,6 +74,11 @@ function showMainApp() {
     show('headerUser');
     $id('headerUserName').textContent =
         (state.user.teamName ? state.user.teamName + ' / ' : '') + state.user.name;
+    // 설정 패널 계정 정보
+    const sName = $id('settingsUserName');
+    const sTeam = $id('settingsTeamName');
+    if (sName) sName.textContent = '👤 ' + (state.user.name || '-');
+    if (sTeam) sTeam.textContent = state.user.teamName ? '🏢 ' + state.user.teamName : '';
     setVal('inspectionDate', new Date().toISOString().split('T')[0]);
 
     $id('itemTotal').addEventListener('blur', () => formatNumber('itemTotal'));

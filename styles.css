@@ -152,6 +152,53 @@ body {
     transform: translateY(0);
 }
 
+/* ===== Account Info (Settings Panel) ===== */
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-200);
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+}
+
+.account-name {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--blue-800);
+}
+
+.account-team {
+    font-size: .78rem;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.btn-logout-full {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--danger);
+    font-family: inherit;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--tr);
+}
+
+.btn-logout-full:hover {
+    background: #FEE2E2;
+}
+
+.btn-logout-full:active {
+    background: #FECACA;
+    transform: translateY(1px);
+}
+
 /* ===== Tab Navigation ===== */
 .tab-nav {
     display: flex;
