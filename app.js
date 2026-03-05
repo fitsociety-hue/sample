@@ -55,14 +55,13 @@ function fetchGlobalCI() {
     fetch(`${GAS_URL}?action=get_global_ci`)
         .then(res => res.json())
         .then(data => {
-            if (data.status === 'ok') {
-                if (data.ciImage) {
-                    // 서버에 CI가 있으면 로컬에 저장 (서버 값 우선)
+            if (data.status === 'ok' && data.ciImage) {
+                // 서버에 CI가 있고 로컬에 없을 때만 서버 값 사용 (개인 저장 CI 보호)
+                if (!localStorage.getItem('gi_ci_image')) {
                     localStorage.setItem('gi_ci_image', data.ciImage);
                 }
-                // 서버에 CI가 없어도 개인이 저장한 로컬 CI는 유지
-                loadCIPreview();
             }
+            loadCIPreview();
         }).catch(err => {
             console.error('글로벌 CI 로드 실패:', err);
             loadCIPreview();
@@ -119,9 +118,15 @@ async function login() {
             state.user = { userId: data.userId, name: data.name, teamName: data.teamName };
             localStorage.setItem('gi_user', JSON.stringify(state.user));
 
-            // 로그인 시 글로벌 CI 가져오기
-            if (data.ciImage) localStorage.setItem('gi_ci_image', data.ciImage);
-            fetchGlobalCI(); // 최신 CI 다시 가져오기
+            // 이 사용자가 저장한 개인 CI 복원 (사용자별 키 사용)
+            const userCIKey = 'gi_ci_' + data.userId;
+            const savedUserCI = localStorage.getItem(userCIKey);
+            if (savedUserCI) {
+                localStorage.setItem('gi_ci_image', savedUserCI);
+            } else {
+                // 개인 CI 없으면 기존 gi_ci_image 키 초기화 (다른 사용자 CI 노출 방지)
+                localStorage.removeItem('gi_ci_image');
+            }
 
             showMainApp();
         } else {
@@ -697,10 +702,14 @@ function deleteCIImage() {
     if (!confirm('CI 이미지를 삭제하고 설정을 저장하시겠습니까?')) return;
     localStorage.removeItem('gi_ci_image_pending');
     localStorage.removeItem('gi_ci_image');
+    // 사용자별 키도 삭제
+    if (state.user && state.user.userId) {
+        localStorage.removeItem('gi_ci_' + state.user.userId);
+    }
     loadCIPreview();
-    syncCIToServer('');
     showToast('CI 이미지가 삭제되었습니다.');
 }
+
 
 function saveCIImage() {
     const pendingData = localStorage.getItem('gi_ci_image_pending');
@@ -709,14 +718,19 @@ function saveCIImage() {
     const btn = $id('ciSaveBtn');
     if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
-    // 로컬에 확정 저장 (서버 동기화 없이 개인 기기에 저장)
+    // 로컬에 확정 저장
     localStorage.setItem('gi_ci_image', pendingData);
+    // 사용자별 영구 키에도 저장 (로그아웃 후에도 복원 가능)
+    if (state.user && state.user.userId) {
+        localStorage.setItem('gi_ci_' + state.user.userId, pendingData);
+    }
     localStorage.removeItem('gi_ci_image_pending');
 
     if (btn) { btn.disabled = false; btn.textContent = '💾 설정 저장'; }
     showToast('CI 이미지가 저장되었습니다.');
     loadCIPreview();
 }
+
 
 async function syncCIToServer(ciImage) {
     fetch(GAS_URL, {
