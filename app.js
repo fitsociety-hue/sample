@@ -461,6 +461,13 @@ function buildPreview() {
             }</div>`;
     };
 
+    /* CI 로고 가져오기 - localStorage 없으면 서버에서 조회 */
+    let ciData = localStorage.getItem('gi_ci_image') || '';
+    let ciHTML = '';
+    if (ciData) {
+        ciHTML = `<img src="${ciData}" style="max-height:40px; object-fit:contain;">`;
+    }
+
     $id('documentPreview').innerHTML = `
     <div class="doc-wrapper">
       <div class="doc-head-info">작성자: <strong>${label}</strong></div>
@@ -492,7 +499,11 @@ function buildPreview() {
           <td class="doc-value sign-row">${getVal('inspectorName')}<span class="doc-seal">(인)</span></td>
         </tr>
       </table>
-      <div class="doc-footer">사단법인 한국지체장애인협회 강동어울림복지관</div>
+      <div class="doc-footer" style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div style="flex:1;"></div>
+        <div style="flex:2; text-align:center; padding-bottom:4px;">사단법인 한국지체장애인협회 강동어울림복지관</div>
+        <div style="flex:1; text-align:right;">${ciHTML}</div>
+      </div>
     </div>`;
 }
 
