@@ -57,10 +57,10 @@ function fetchGlobalCI() {
         .then(data => {
             if (data.status === 'ok') {
                 if (data.ciImage) {
+                    // 서버에 CI가 있으면 로컬에 저장 (서버 값 우선)
                     localStorage.setItem('gi_ci_image', data.ciImage);
-                } else {
-                    localStorage.removeItem('gi_ci_image');
                 }
+                // 서버에 CI가 없어도 개인이 저장한 로컬 CI는 유지
                 loadCIPreview();
             }
         }).catch(err => {
