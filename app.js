@@ -629,15 +629,7 @@ function switchTab(tab) {
     $id('settingsPanel').style.display = tab === 'settings' ? '' : 'none';
     if (tab === 'history') loadHistory();
     if (tab === 'settings') {
-        // 관리자 인증 상태 확인
-        if (state.adminAuth) {
-            show('adminSettingsArea');
-            hide('adminLoginArea');
-            loadCIPreview();
-        } else {
-            show('adminLoginArea');
-            hide('adminSettingsArea');
-        }
+        loadCIPreview();
     }
 }
 
@@ -710,30 +702,23 @@ function deleteCIImage() {
     showToast('CI 이미지가 삭제되었습니다.');
 }
 
-async function saveCIImage() {
+function saveCIImage() {
     const pendingData = localStorage.getItem('gi_ci_image_pending');
     if (!pendingData) return;
 
     const btn = $id('ciSaveBtn');
     if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
-    // 서버로 동기화
-    await syncCIToServer(pendingData);
-
-    // 확정
+    // 로컬에 확정 저장 (서버 동기화 없이 개인 기기에 저장)
     localStorage.setItem('gi_ci_image', pendingData);
     localStorage.removeItem('gi_ci_image_pending');
 
     if (btn) { btn.disabled = false; btn.textContent = '💾 설정 저장'; }
-    showToast('새로운 CI 이미지가 저장되었습니다.');
+    showToast('CI 이미지가 저장되었습니다.');
     loadCIPreview();
 }
 
 async function syncCIToServer(ciImage) {
-    if (!state.adminAuth) {
-        showToast('❌ 관리자 인증이 필요합니다.', 'error');
-        return;
-    }
     fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
